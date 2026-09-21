@@ -1,4 +1,4 @@
-export type AppScreen = 'Dashboard' | 'Tickets' | 'User Management' | 'Reports' | 'Dispatch' | 'Customer Entry' | 'HW Inventory' | 'Price Configuration';
+export type AppScreen = 'Dashboard' | 'Tickets' | 'User Management' | 'Reports' | 'Dispatch' | 'Customer Entry' | 'HW Inventory' | 'Price Configuration' | 'Operations Tools';
 
 export const USER_ROLES = {
   Admin:         'Admin',

@@ -34,7 +34,7 @@ export class UserManagementComponent {
   editingUser     = signal<User | null>(null);
 
   availableScreens: AppScreen[] = [
-    'Dashboard', 'Tickets', 'User Management', 'Reports', 'Dispatch', 'Customer Entry', 'HW Inventory', 'Price Configuration',
+    'Dashboard', 'Tickets', 'User Management', 'Reports', 'Dispatch', 'Customer Entry', 'HW Inventory', 'Price Configuration', 'Operations Tools',
   ];
   selectedPermissions = signal<boolean[]>(new Array(this.availableScreens.length).fill(false));
 

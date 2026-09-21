@@ -40,9 +40,10 @@ export class AuthGuard implements CanActivate, CanActivateChild {
     const requiredPermission = ROUTE_PERMISSIONS[path];
 
     if (requiredPermission) {
-      // Admins and Managers bypass the permission table for Dispatch & Customer Entry
+      // Admins and Managers bypass the permission table for these screens —
+      // matches the fallbacks used in layout.component.ts's canView* signals.
       if (
-        (path === 'dispatch' || path === 'customer-entry' || path === 'hw-inventory' || path === 'price-configuration') &&
+        (path === 'dispatch' || path === 'customer-entry' || path === 'hw-inventory' || path === 'price-configuration' || path === 'user-management') &&
         (this.authService.isAdmin() || this.authService.isManager())
       ) {
         return true;

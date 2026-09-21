@@ -59,7 +59,13 @@ export class LayoutComponent {
 
     this.canViewDashboard      = computed(() => this.authService.hasPermission('Dashboard'));
     this.canViewTickets        = computed(() => this.authService.hasPermission('Tickets'));
-    this.canViewUserManagement = computed(() => this.authService.hasPermission('User Management'));
+    // User Management: visible to Admin, Manager (same access level as Operations
+    // Tools — see canViewOperations below), or anyone with explicit permission.
+    this.canViewUserManagement = computed(() =>
+      this.authService.hasPermission('User Management') ||
+      this.authService.isAdmin() ||
+      this.authService.isManager()
+    );
     this.canViewReports        = computed(() => this.authService.hasPermission('Reports'));
     this.canViewDispatch       = computed(() =>
       this.authService.hasPermission('Dispatch') ||
@@ -93,9 +99,10 @@ export class LayoutComponent {
       this.authService.isAdmin() ||
       this.authService.isManager()
     );
-    // Operations Tools (auto-discovered pages under src/features/) — Admin/Manager only,
-    // matching OpsGuard in src/guards/ops.guard.ts.
+    // Operations Tools (auto-discovered pages under src/features/) — Admin/Manager,
+    // or anyone with explicit permission. Matches OpsGuard in src/guards/ops.guard.ts.
     this.canViewOperations = computed(() =>
+      this.authService.hasPermission('Operations Tools') ||
       this.authService.isAdmin() ||
       this.authService.isManager()
     );
