@@ -4,7 +4,11 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "generate:features": "node scripts/generate-features.mjs",
+    "generate:features:watch": "node scripts/generate-features.mjs --watch",
+    "predev": "npm run generate:features",
     "dev": "ng serve",
+    "prebuild": "npm run generate:features",
     "build": "ng build",
     "preview": "ng serve --configuration=production"
   },
@@ -18,10 +22,12 @@
     "@angular/forms": "^21.1.4",
     "@angular/platform-browser": "^21.1.0",
     "@angular/router": "^21.1.4",
+    "exceljs": "^4.4.0",
     "pdfjs-dist": "^6.1.200",
     "qz-tray": "^2.2.6",
     "rxjs": "^7.8.2",
-    "tailwindcss": "latest"
+    "tailwindcss": "latest",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

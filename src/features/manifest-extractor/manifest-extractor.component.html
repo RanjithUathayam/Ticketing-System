@@ -1,0 +1,354 @@
+<div class="manifest-wrapper fx-manifest-extractor-scope" #root>
+    <div class="manifest-container">
+        <div class="manifest-header">
+            <div class="manifest-title">Manifest → Order Sheet
+                <small>Airwaybill / Order No / Weight extractor</small>
+            </div>
+            <div class="postmark">
+                <span>PDF OK</span>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Upload Manifests</h2>
+            <div id="dropzone" class="panel">
+                <div class="big">Drag PDF manifests here, or click to select</div>
+                <div class="small">Extracts airwaybill, order number, and weight from each page</div>
+                <input type="file" id="fileInput" accept=".pdf" multiple>
+            </div>
+            <div id="fileList" class="filelist"></div>
+        </div>
+
+        <div class="panel">
+            <h2>Order Sheet Parameters</h2>
+            <div class="controls-manifest">
+                <div>
+                    <label>Starting Row #</label>
+                    <input type="number" id="startNo" value="1" min="1">
+                </div>
+                <div>
+                    <label>Date</label>
+                    <input type="text" id="dateField">
+                </div>
+            </div>
+            <div>
+                <label>From Address (one per line)</label>
+                <textarea id="fromField" rows="3" style="width:100%;padding:8px;border:1px solid #1e3a5f;font-family:monospace;font-size:12px;border-radius:3px;"></textarea>
+            </div>
+            <div style="margin-top:14px;">
+                <label>To Address (one per line)</label>
+                <textarea id="toField" rows="3" style="width:100%;padding:8px;border:1px solid #1e3a5f;font-family:monospace;font-size:12px;border-radius:3px;"></textarea>
+            </div>
+            <div style="margin-top:14px;">
+                <label>Mobile / Phone</label>
+                <input type="text" id="mobileField" style="width:100%;padding:8px;border:1px solid #1e3a5f;font-family:monospace;font-size:12px;border-radius:3px;">
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Extracted Data</h2>
+            <div id="tableHolder"></div>
+            <div id="emptyMsg" class="empty">No data extracted yet. Upload PDF manifests above.</div>
+
+            <div class="actions">
+                <button class="btn-manifest" id="addRowBtn" type="button">+ Add Row</button>
+                <button class="btn-manifest secondary" id="renumberBtn" type="button">Renumber</button>
+                <button class="btn-manifest secondary" id="clearBtn" type="button" style="color:#a13d2e;">Clear All</button>
+                <div class="count-badge"><b id="countBadge">0</b> rows extracted</div>
+            </div>
+
+            <div class="actions" style="margin-top:20px;">
+                <button class="btn-manifest" id="downloadBtn2" type="button">Download Order Sheet (.xlsx)</button>
+            </div>
+        </div>
+
+        <footer>
+            Manifest Extractor • PDF processing powered by pdf.js
+        </footer>
+    </div>
+</div>
+
+<style>
+  /* .manifest-wrapper's own original background/padding are merged into this
+     scope rule (matching the box-packing port's convention of collapsing the
+     tool's outer page-level class into the scope class). The original also
+     set `min-height:100vh`, which assumed the tool owned the full page — that
+     is dropped here (with a small border-radius added instead) so the tool
+     renders as a self-contained card inside the ticketing app's layout.
+     --primary-light / --border-color are folded in from the hub's global
+     :root because the shared table/th/td rules below (needed for the
+     extracted-data table) reference them; font-family/color are folded in
+     from the hub's global `body` rule because app2's own markup never sets a
+     baseline font for its plain text (labels, footer, filelist status, etc.)
+     and would otherwise inherit the ticketing app shell's ambient font. */
+  .fx-manifest-extractor-scope{
+    --primary-light:#334155;
+    --border-color:#e2e8f0;
+    display:block;
+    background:#f6f3ea;
+    padding:32px 20px 60px;
+    border-radius:12px;
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    color:#0f172a;
+  }
+  .fx-manifest-extractor-scope *{box-sizing:border-box;}
+
+  .fx-manifest-extractor-scope .manifest-container{
+    max-width:900px;
+    margin:0 auto;
+    padding:0;
+  }
+
+  .fx-manifest-extractor-scope .manifest-header{
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    border-bottom:3px solid #1e3a5f;
+    padding-bottom:14px;
+    margin-bottom:28px;
+  }
+
+  .fx-manifest-extractor-scope .manifest-title{
+    font-family:"Fraunces", "Iowan Old Style", Georgia, serif;
+    font-weight:700;
+    font-size:30px;
+    letter-spacing:-0.01em;
+    color:#122437;
+  }
+
+  .fx-manifest-extractor-scope .manifest-title small{
+    display:block;
+    font-family:"IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-weight:500;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:#a13d2e;
+    margin-top:4px;
+  }
+
+  .fx-manifest-extractor-scope .postmark{
+    width:74px;
+    height:74px;
+    border-radius:50%;
+    border:2px solid #1e3a5f;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    opacity:.85;
+    flex:0 0 auto;
+  }
+
+  .fx-manifest-extractor-scope .postmark::before{
+    content:"";
+    position:absolute;
+    inset:6px;
+    border:1px dashed #1e3a5f;
+    border-radius:50%;
+  }
+
+  .fx-manifest-extractor-scope .postmark span{
+    font-size:9px;
+    font-weight:600;
+    letter-spacing:.08em;
+    text-align:center;
+    line-height:1.3;
+    text-transform:uppercase;
+    color:#1e3a5f;
+  }
+
+  .fx-manifest-extractor-scope .panel{
+    background:#fffdf8;
+    border:1px solid #ded7c2;
+    box-shadow:0 1px 0 rgba(0,0,0,.03);
+    padding:22px;
+    margin-bottom:22px;
+  }
+
+  .fx-manifest-extractor-scope .panel h2{
+    margin:0 0 14px;
+    font-family:"Fraunces", "Iowan Old Style", Georgia, serif;
+    font-size:17px;
+    font-weight:700;
+    color:#122437;
+  }
+
+  .fx-manifest-extractor-scope #dropzone{
+    border:2px dashed #1e3a5f;
+    padding:34px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:background .15s ease, border-color .15s ease;
+    position:relative;
+  }
+
+  .fx-manifest-extractor-scope #dropzone:hover, .fx-manifest-extractor-scope #dropzone.drag{
+    background:#eef2f6;
+    border-color:#a13d2e;
+  }
+
+  .fx-manifest-extractor-scope #dropzone .big{
+    font-family:"Fraunces", "Iowan Old Style", Georgia, serif;
+    font-size:17px;
+    color:#122437;
+    margin-bottom:6px;
+  }
+
+  .fx-manifest-extractor-scope #dropzone .small{
+    font-size:12px;
+    color:#6b7280;
+  }
+
+  .fx-manifest-extractor-scope #fileInput{display:none;}
+
+  .fx-manifest-extractor-scope .filelist{
+    margin-top:14px;
+    font-size:12.5px;
+  }
+
+  .fx-manifest-extractor-scope .filelist .f{
+    display:flex;
+    justify-content:space-between;
+    padding:6px 0;
+    border-bottom:1px solid #ded7c2;
+  }
+
+  .fx-manifest-extractor-scope .filelist .f .name{ color:#122437; font-weight:600; }
+  .fx-manifest-extractor-scope .filelist .f .status{ color:#6b7280; }
+  .fx-manifest-extractor-scope .filelist .f .status.ok{ color:#2f6b4f; font-weight:600; }
+  .fx-manifest-extractor-scope .filelist .f .status.err{ color:#a13d2e; font-weight:600; }
+
+  .fx-manifest-extractor-scope .controls-manifest{
+    display:flex;
+    gap:14px;
+    align-items:flex-end;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+
+  .fx-manifest-extractor-scope .controls-manifest label{
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:#6b7280;
+    display:block;
+    margin-bottom:5px;
+  }
+
+  .fx-manifest-extractor-scope .controls-manifest input[type=number],
+  .fx-manifest-extractor-scope .controls-manifest input[type=text]{
+    font-family:"IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size:13px;
+    padding:7px 9px;
+    border:1px solid #1e3a5f;
+    background:#fff;
+    width:110px;
+  }
+
+  .fx-manifest-extractor-scope .actions{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    margin-top:18px;
+    flex-wrap:wrap;
+  }
+
+  .fx-manifest-extractor-scope .btn-manifest{
+    font-family:"IBM Plex Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-weight:600;
+    font-size:12.5px;
+    letter-spacing:.03em;
+    text-transform:uppercase;
+    padding:11px 18px;
+    border:1.5px solid #1e3a5f;
+    background:#1e3a5f;
+    color:#f6f3ea;
+    cursor:pointer;
+    transition:background .12s ease, transform .05s ease;
+  }
+
+  .fx-manifest-extractor-scope .btn-manifest:hover{ background:#122437; }
+  .fx-manifest-extractor-scope .btn-manifest:active{ transform:translateY(1px); }
+  .fx-manifest-extractor-scope .btn-manifest.secondary{
+    background:transparent;
+    color:#1e3a5f;
+  }
+
+  .fx-manifest-extractor-scope .btn-manifest.secondary:hover{ background:#eef2f6; }
+  .fx-manifest-extractor-scope .btn-manifest:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .fx-manifest-extractor-scope .count-badge{
+    font-size:12px;
+    color:#6b7280;
+    margin-left:auto;
+  }
+
+  .fx-manifest-extractor-scope .count-badge b{ color:#122437; }
+
+  .fx-manifest-extractor-scope .empty{
+    text-align:center;
+    padding:36px 10px;
+    color:#6b7280;
+    font-size:13px;
+  }
+
+  .fx-manifest-extractor-scope footer{
+    text-align:center;
+    font-size:11px;
+    color:#6b7280;
+    margin-top:30px;
+    letter-spacing:.04em;
+  }
+
+  .fx-manifest-extractor-scope::selection{ background:#a13d2e; color:#fff; }
+
+  /* Shared hub-wide primitives (grouped under the hub's "APP 1" style comment
+     rather than app2's own, but structurally global) that app2's own markup
+     also relies on: the JS-rendered extracted-data <table> uses plain
+     table/th/td with no app2-specific override, and every button here is a
+     literal <button> element matched by the bare `button` selector. */
+  .fx-manifest-extractor-scope table{
+    width:100%;
+    border-collapse:collapse;
+    text-align:left;
+    font-size:13px;
+  }
+
+  .fx-manifest-extractor-scope th{
+    background-color:#f1f5f9;
+    color:var(--primary-light);
+    font-weight:600;
+    padding:12px 16px;
+    position:sticky;
+    top:0;
+    z-index:10;
+    border-bottom:1px solid var(--border-color);
+  }
+
+  .fx-manifest-extractor-scope td{
+    padding:12px 16px;
+    border-bottom:1px solid var(--border-color);
+    color:#334155;
+  }
+
+  .fx-manifest-extractor-scope tr:last-child td{ border-bottom:none; }
+  .fx-manifest-extractor-scope tr:hover td{ background-color:#f8fafc; }
+
+  .fx-manifest-extractor-scope button{
+    font-family:inherit;
+    font-weight:600;
+    font-size:14px;
+    padding:12px 24px;
+    border-radius:6px;
+    border:none;
+    cursor:pointer;
+    transition:background 0.2s;
+  }
+
+  .fx-manifest-extractor-scope button:disabled{
+    background-color:#cbd5e1;
+    color:#94a3b8;
+    cursor:not-allowed;
+  }
+</style>

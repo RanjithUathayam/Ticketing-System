@@ -1,0 +1,862 @@
+<div class="fx-shipment-dashboard-scope" #root>
+
+<header>
+  <div class="logo">
+    <div class="logo-badge" id="hdr-badge">SI</div>
+    <div>
+      <h1 id="hdr-title">Shipment Intelligence</h1>
+      <p id="hdr-sub">Multi-Courier Dashboard</p>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <div class="pulse"></div>
+    <div class="hdr-date" id="live-date"></div>
+    <button class="up-btn" id="reset-btn" style="display:none;padding:7px 16px;font-size:12px" data-action="resetDashboard">↺ Start Over</button>
+  </div>
+</header>
+
+<!-- UPLOAD -->
+<div id="upload-section">
+  <div style="max-width:1100px;margin:40px auto;padding:0 24px">
+    <div style="text-align:center;margin-bottom:28px">
+      <h2 style="font-size:22px;font-weight:800;margin-bottom:8px">Upload Your Shipment Files</h2>
+      <p style="color:var(--muted);font-size:13px">Upload one, two, or all three — courier files are matched to their own slot. All analysis runs in your browser; no data leaves your device.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-bottom:24px">
+
+      <div class="slot-zone" id="slot-bandb" data-type="bandb">
+        <div class="up-icon" style="font-size:34px;margin-bottom:10px">🏭</div>
+        <h3 style="font-size:15px;margin-bottom:6px">EKART / BANDB</h3>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Unicommerce shipment export</p>
+        <button class="up-btn" style="padding:8px 20px;font-size:12px" data-action="browseSlot" data-arg="bandb">Browse File</button>
+        <input type="file" id="inp-bandb" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="slot-status" id="status-bandb">No file selected</div>
+      </div>
+
+      <div class="slot-zone" id="slot-bluedart" data-type="bluedart">
+        <div class="up-icon" style="font-size:34px;margin-bottom:10px">📦</div>
+        <h3 style="font-size:15px;margin-bottom:6px">BlueDart</h3>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">InternetDart / waybill export</p>
+        <button class="up-btn" style="padding:8px 20px;font-size:12px" data-action="browseSlot" data-arg="bluedart">Browse File</button>
+        <input type="file" id="inp-bluedart" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="slot-status" id="status-bluedart">No file selected</div>
+      </div>
+
+      <div class="slot-zone" id="slot-indiapost" data-type="indiapost">
+        <div class="up-icon" style="font-size:34px;margin-bottom:10px">📮</div>
+        <h3 style="font-size:15px;margin-bottom:6px">India Post</h3>
+        <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Article / booking export</p>
+        <button class="up-btn" style="padding:8px 20px;font-size:12px" data-action="browseSlot" data-arg="indiapost">Browse File</button>
+        <input type="file" id="inp-indiapost" accept=".csv,.xlsx,.xls" style="display:none">
+        <div class="slot-status" id="status-indiapost">No file selected</div>
+      </div>
+
+    </div>
+    <div id="detect-error" style="display:none;margin-bottom:16px;color:var(--red);font-size:13px;font-weight:600;text-align:center"></div>
+    <div style="text-align:center">
+      <button class="up-btn" id="build-btn" style="padding:13px 40px;font-size:14px;opacity:.4;pointer-events:none" data-action="buildDashboard">📊 Build Dashboard</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOP-LEVEL COURIER SWITCHER (shown once dashboard is built) -->
+<div class="tab-nav" id="master-nav" style="display:none"></div>
+
+<!-- COMBINED OVERVIEW -->
+<div id="app-combined" class="app-module">
+  <div class="page active" id="combined-page">
+    <div class="sec-hdr" style="margin-top:24px">
+      <span class="sec-title">Combined Overview — All Couriers</span>
+      <span id="combined-date" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="kpi-grid" id="combined-kpi-grid"></div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">📦 Volume by Courier</div>
+        <div class="cc-wrap h260"><canvas id="combined-volume-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">✅ Delivery Rate by Courier</div>
+        <div class="cc-wrap h260"><canvas id="combined-rate-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">Courier-wise Summary</span></div>
+    <div class="tbl-scroll" style="max-height:none">
+      <table><thead><tr>
+        <th>Courier</th><th>Total Shipments</th><th>Delivered</th><th>Delivery Rate</th><th>Pending / In-Transit</th><th>RTO / Returned</th>
+      </tr></thead><tbody id="combined-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- DASHBOARD: BANDB / EKART -->
+<div id="app-bandb" class="app-module">
+  <div class="tab-nav">
+    <button class="tab-btn active" data-action="switchTab" data-arg="overview">📊 Overview</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="tat">⏱ TAT Breach</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="dispatch">🚚 Dispatch by Date</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="delivered">✅ Delivered by Date</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="pending">⚠️ Pending 5+ Days</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="attempts">📞 2+ Attempts</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="lastmonth">📅 Last Month</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="zone">🗺 Zone / City</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="rto">↩️ RTO Month-wise</button>
+    <button class="tab-btn" data-action="switchTab" data-arg="thoughts">💡 Insights</button>
+  </div>
+
+  <!-- ═══ OVERVIEW PAGE ═══ -->
+  <div class="page active" id="page-overview">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Summary Overview</span>
+      <span id="rpt-date" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="kpi-grid" id="kpi-grid"></div>
+    <div class="charts-row cr-3">
+      <div class="chart-card">
+        <div class="cc-title">📅 Dispatch Trend by Pickup Date</div>
+        <div class="cc-wrap h260"><canvas id="trend-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">💳 Payment Mix</div>
+        <div class="cc-wrap"><canvas id="pay-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">🗺 Zone Split</div>
+        <div class="cc-wrap"><canvas id="zone-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-row cr-3e">
+      <div class="chart-card">
+        <div class="cc-title">🚚 Shipment Status</div>
+        <div class="cc-wrap"><canvas id="status-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">🔁 NDR Reasons</div>
+        <div class="cc-wrap"><canvas id="ndr-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">🏷 Shipment Tags</div>
+        <div class="cc-wrap"><canvas id="tag-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">✅ Deliveries by Date</div>
+        <div class="cc-wrap"><canvas id="del-trend-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">⏱ TAT Breach Summary</div>
+        <div class="cc-wrap"><canvas id="tat-overview-chart"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ TAT BREACH PAGE ═══ -->
+  <div class="page" id="page-tat">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">TAT Breach Analysis</span>
+      <button class="dl-btn" data-action="downloadTatAll">⬇ Download All TAT Breached (Excel)</button>
+    </div>
+    <div class="stat-bar" id="tat-stat-bar"></div>
+    <div class="tat-section">
+      <div class="tat-header">
+        <div class="tat-tabs" id="tat-tabs"></div>
+        <button class="dl-btn" data-action="downloadTatFiltered">⬇ Download Filtered (Excel)</button>
+      </div>
+      <div class="tbl-bar">
+        <input type="text" class="tbl-search" id="tat-search" placeholder="🔍 Customer / AWB / Order...">
+        <select class="tbl-sel" id="tat-zone">
+          <option value="">All Zones</option>
+        </select>
+        <select class="tbl-sel" id="tat-pay">
+          <option value="">All Payment</option>
+          <option value="COD">COD</option>
+          <option value="Prepaid">Prepaid</option>
+        </select>
+        <span class="cnt-badge" id="tat-count"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table><thead><tr>
+          <th>#</th><th>Shipment ID</th><th>Customer</th><th>Phone</th>
+          <th>Payment</th><th>Status</th><th>Pickup Date</th><th>TAT Breach</th>
+          <th>Zone</th><th>Amount</th><th>COD</th><th>Attempts</th>
+          <th>NDR Status</th><th>Tracking</th><th>Tags</th>
+        </tr></thead>
+        <tbody id="tat-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DISPATCH BY DATE ═══ -->
+  <div class="page" id="page-dispatch">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Dispatch (Pickup) by Date</span>
+    </div>
+    <div class="date-picker-row">
+      <label>Select Dispatch Date:</label>
+      <select class="date-sel" id="dispatch-date-sel"></select>
+      <button class="view-btn" data-action="loadDispatchDate">View Orders</button>
+      <button class="dl-btn" data-action="downloadDispatch">⬇ Download Excel</button>
+    </div>
+    <div class="stat-bar" id="dispatch-stat-bar" style="display:none"></div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="disp-search" placeholder="🔍 Customer / AWB...">
+      <select class="tbl-sel" id="disp-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <select class="tbl-sel" id="disp-zone">
+        <option value="">All Zones</option>
+      </select>
+      <span class="cnt-badge" id="disp-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Order No</th><th>Customer</th>
+        <th>Phone</th><th>Payment</th><th>Status</th><th>Zone</th>
+        <th>Amount</th><th>COD</th><th>Qty</th><th>Product</th><th>Tags</th>
+      </tr></thead>
+      <tbody id="disp-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ DELIVERED BY DATE ═══ -->
+  <div class="page" id="page-delivered">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Delivered Orders by Date</span>
+    </div>
+    <div class="date-picker-row">
+      <label>Select Delivery Date:</label>
+      <select class="date-sel" id="delivery-date-sel"></select>
+      <button class="view-btn" data-action="loadDeliveryDate">View Orders</button>
+      <button class="dl-btn" data-action="downloadDelivery">⬇ Download Excel</button>
+    </div>
+    <div class="stat-bar" id="delivery-stat-bar" style="display:none"></div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="del-search" placeholder="🔍 Customer / Phone...">
+      <select class="tbl-sel" id="del-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <select class="tbl-sel" id="del-zone">
+        <option value="">All Zones</option>
+      </select>
+      <select class="tbl-sel" id="del-tat">
+        <option value="">On-time + Late</option>
+        <option value="ontime">On-time only</option>
+        <option value="late">Late only</option>
+      </select>
+      <select class="tbl-sel" id="del-ndr">
+        <option value="">NDR: All</option>
+        <option value="yes">Had NDR</option>
+        <option value="no">No NDR</option>
+      </select>
+      <span class="cnt-badge" id="del-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>AWB</th><th>Customer</th><th>Phone</th><th>Payment</th>
+        <th>Pickup Date</th><th>Delivery Date</th><th>Days Taken</th>
+        <th>Attempts</th><th>On-time?</th><th>NDR History</th>
+        <th>Zone</th><th>Amount</th><th>COD</th><th>Qty</th><th>Product</th>
+      </tr></thead>
+      <tbody id="del-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ PENDING 5+ DAYS ═══ -->
+  <div class="page" id="page-pending">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Dispatched — Not Delivered in 5+ Days</span>
+      <button class="dl-btn" data-action="downloadPending">⬇ Download Excel</button>
+    </div>
+    <div class="stat-bar" id="pending-stat-bar"></div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="pend-search" placeholder="🔍 Customer / AWB / Order...">
+      <select class="tbl-sel" id="pend-status"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="pend-zone">
+        <option value="">All Zones</option>
+      </select>
+      <select class="tbl-sel" id="pend-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <span class="cnt-badge" id="pend-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Customer</th><th>Phone</th>
+        <th>Payment</th><th>Status</th><th>Pickup Date</th><th>Days</th>
+        <th>Zone</th><th>Amount</th><th>COD</th><th>TAT Breach</th>
+        <th>Attempts</th><th>NDR</th><th>Tags</th><th>Last Update</th>
+      </tr></thead>
+      <tbody id="pend-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ LAST MONTH ═══ -->
+  <div class="page" id="page-lastmonth">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Month-wise Performance</span>
+      <span id="lm-label" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="date-picker-row">
+      <label>Select Month:</label>
+      <select class="date-sel" id="lm-month-sel"></select>
+      <button class="view-btn" data-action="loadLastMonthSelected">View Month</button>
+    </div>
+    <div class="stat-bar" id="lm-stat-bar"></div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">🚚 Status Split — Selected Month</div>
+        <div class="cc-wrap h260"><canvas id="lm-status-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">💳 Prepaid vs COD by Status — Selected Month</div>
+        <div class="cc-wrap h260"><canvas id="lm-pay-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title">Status × Payment Breakdown</span>
+      <button class="dl-btn" data-action="downloadLastMonthSummary">⬇ Download Summary (Excel)</button>
+    </div>
+    <div class="tbl-scroll" style="max-height:none;margin-bottom:20px">
+      <table><thead><tr>
+        <th>Status</th><th>Prepaid</th><th>COD</th><th>Total</th>
+        <th>Prepaid %</th><th>COD %</th>
+        <th>Prepaid Value</th><th>COD Value</th><th>Total Value</th>
+      </tr></thead><tbody id="lm-summary-tbody"></tbody></table>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title">Selected Month — Order Detail</span>
+      <button class="dl-btn" data-action="downloadLastMonth">⬇ Download Orders (Excel)</button>
+    </div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="lm-search" placeholder="🔍 Customer / AWB / Order...">
+      <select class="tbl-sel" id="lm-status"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="lm-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <select class="tbl-sel" id="lm-zone">
+        <option value="">All Zones</option>
+      </select>
+      <span class="cnt-badge" id="lm-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Customer</th><th>Phone</th>
+        <th>Payment</th><th>Status</th><th>Pickup Date</th><th>Delivery Date</th>
+        <th>Zone</th><th>Amount</th><th>COD</th><th>Tags</th>
+      </tr></thead>
+      <tbody id="lm-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ ZONE / CITY ═══ -->
+  <div class="page" id="page-zone">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Zone / City Performance</span>
+      <span id="zone-label" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">📦 Orders by Zone — Prepaid vs COD</div>
+        <div class="cc-wrap h260"><canvas id="zone-pay-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">✅ Delivery Rate by Zone</div>
+        <div class="cc-wrap h260"><canvas id="zone-rate-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title" id="zone-summary-title">Zone-wise Summary</span>
+      <button class="dl-btn" data-action="downloadZoneSummary">⬇ Download Summary (Excel)</button>
+    </div>
+    <div class="tbl-scroll" style="max-height:none;margin-bottom:20px">
+      <table><thead><tr>
+        <th id="zone-col-hdr">Zone</th><th>Total Orders</th><th>Prepaid</th><th>COD</th>
+        <th>Delivered</th><th>In Transit</th><th>Out for Delivery</th><th>Undelivered (NDR)</th>
+        <th>RTO In Transit</th><th>Delivery Rate</th><th>Revenue</th><th>COD Value</th>
+      </tr></thead><tbody id="zone-summary-tbody"></tbody></table>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title">Zone / City — Order Detail</span>
+      <button class="dl-btn" data-action="downloadZoneOrders">⬇ Download Orders (Excel)</button>
+    </div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="zn-search" placeholder="🔍 Customer / AWB / Order...">
+      <select class="tbl-sel" id="zn-zone"><option value="">All Zones</option></select>
+      <select class="tbl-sel" id="zn-status"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="zn-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <span class="cnt-badge" id="zn-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Customer</th><th>Phone</th>
+        <th>Payment</th><th>Status</th><th>Zone</th><th>Amount</th><th>COD</th><th>Tags</th>
+      </tr></thead>
+      <tbody id="zn-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ RTO MONTH-WISE PAGE ═══ -->
+  <div class="page" id="page-rto">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">RTO — Month-wise (In Transit vs Delivered, Prepaid vs COD)</span>
+      <span style="font-size:11px;color:var(--muted)">Grouped by Pickup Date month</span>
+    </div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">↩️ RTO Orders by Month — Prepaid vs COD</div>
+        <div class="cc-wrap h260"><canvas id="rto-month-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">📈 RTO % of Total Orders — by Month</div>
+        <div class="cc-wrap h260"><canvas id="rto-rate-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">📦 RTO In Transit vs RTO Delivered — by Month</div>
+        <div class="cc-wrap h260"><canvas id="rto-status-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">✅ RTO Delivered — Prepaid vs COD — by Month</div>
+        <div class="cc-wrap h260"><canvas id="rto-delivered-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title">Month-wise RTO Summary</span>
+      <button class="dl-btn" data-action="downloadRtoMonthly">⬇ Download Summary (Excel)</button>
+    </div>
+    <div class="tbl-scroll" style="max-height:none;margin-bottom:20px">
+      <table><thead><tr>
+        <th>Month</th><th>Total Orders</th><th>RTO Total</th><th>RTO %</th>
+        <th>RTO In Transit</th><th>RTO Delivered</th>
+        <th>RTO — Prepaid</th><th>RTO Prepaid %</th>
+        <th>RTO — COD</th><th>RTO COD %</th>
+      </tr></thead><tbody id="rto-month-tbody"></tbody></table>
+    </div>
+    <div class="sec-hdr">
+      <span class="sec-title">RTO — Order Detail (All Months)</span>
+      <button class="dl-btn" data-action="downloadRtoOrders">⬇ Download Orders (Excel)</button>
+    </div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="rto-search" placeholder="🔍 Customer / AWB / Order...">
+      <select class="tbl-sel" id="rto-month-sel-filter"><option value="">All Months</option></select>
+      <select class="tbl-sel" id="rto-status-sel">
+        <option value="">All RTO Status</option>
+        <option value="RTO In Transit">RTO In Transit</option>
+        <option value="RTO Delivered">RTO Delivered</option>
+      </select>
+      <select class="tbl-sel" id="rto-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <select class="tbl-sel" id="rto-stuck-sel">
+        <option value="0">Any Age</option>
+        <option value="3">Stuck 3+ days</option>
+        <option value="5">Stuck 5+ days</option>
+        <option value="7">Stuck 7+ days</option>
+        <option value="15">Stuck 15+ days</option>
+        <option value="30">Stuck 30+ days</option>
+      </select>
+      <span class="cnt-badge" id="rto-count"></span>
+      <span class="cnt-badge" id="rto-stuck-count" style="background:rgba(239,68,68,.15);color:var(--red)"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Customer</th><th>Phone</th>
+        <th>Payment</th><th>RTO Status</th><th>Days Stuck</th><th>Pickup Date</th><th>Zone</th><th>Amount</th><th>COD</th>
+      </tr></thead>
+      <tbody id="rto-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <!-- ═══ INSIGHTS PAGE ═══ -->
+  <div class="page" id="page-thoughts">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">💡 Actionable Insights — Current Data Analysis</span>
+    </div>
+    <div class="thoughts-card" id="thoughts-content"></div>
+  </div>
+
+  <!-- ═══ 2+ ATTEMPTS PAGE ═══ -->
+  <div class="page" id="page-attempts">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Non-Delivered — 2+ Delivery Attempts</span>
+      <button class="dl-btn" data-action="downloadAttempts">⬇ Download Excel</button>
+    </div>
+    <div class="stat-bar" id="attempts-stat-bar"></div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="att-search" placeholder="🔍 Customer / AWB / Order...">
+      <select class="tbl-sel" id="att-status"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="att-zone">
+        <option value="">All Zones</option>
+      </select>
+      <select class="tbl-sel" id="att-pay">
+        <option value="">All Payment</option>
+        <option value="COD">COD</option>
+        <option value="Prepaid">Prepaid</option>
+      </select>
+      <span class="cnt-badge" id="att-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Shipment ID</th><th>AWB</th><th>Customer</th><th>Phone</th>
+        <th>Payment</th><th>Status</th><th>Pickup Date</th><th>Days Pending</th>
+        <th>Attempts</th><th>Zone</th><th>Amount</th><th>COD</th><th>TAT Breach</th>
+        <th>NDR Status</th><th>Tags</th><th>Last Update</th>
+      </tr></thead>
+      <tbody id="att-tbody"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DASHBOARD: BLUEDART -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="app-bluedart" class="app-module">
+  <div class="tab-nav">
+    <button class="tab-btn active" data-action="switchTabBD" data-arg="overview">📊 Overview</button>
+    <button class="tab-btn" data-action="switchTabBD" data-arg="records">📋 Records</button>
+    <button class="tab-btn" data-action="switchTabBD" data-arg="insights">💡 Insights</button>
+  </div>
+
+  <div class="page active" id="bd-page-overview">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Summary Overview</span>
+      <span id="bd-rpt-date" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="kpi-grid" id="bd-kpi-grid"></div>
+    <div class="charts-row cr-3e">
+      <div class="chart-card">
+        <div class="cc-title">🚚 Shipment Status</div>
+        <div class="cc-wrap h260"><canvas id="bd-status-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">⚖️ Weight Distribution</div>
+        <div class="cc-wrap h260"><canvas id="bd-weight-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">📦 Service / Product Type</div>
+        <div class="cc-wrap h260"><canvas id="bd-product-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-row cr-3">
+      <div class="chart-card">
+        <div class="cc-title">📍 Top Origins</div>
+        <div class="cc-wrap h260"><canvas id="bd-origin-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">🎯 Top Destinations</div>
+        <div class="cc-wrap h260"><canvas id="bd-dest-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">👤 Top Senders</div>
+        <div class="cc-wrap h260"><canvas id="bd-sender-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">Top Origins — Ranked</span></div>
+    <div class="tbl-scroll" style="max-height:260px;margin-bottom:20px">
+      <table><thead><tr><th>#</th><th>City</th><th>Shipments</th><th>% of Total</th></tr></thead>
+      <tbody id="bd-origins-tbody"></tbody></table>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">Top Destinations — Ranked</span></div>
+    <div class="tbl-scroll" style="max-height:260px">
+      <table><thead><tr><th>#</th><th>City</th><th>Shipments</th><th>% of Total</th></tr></thead>
+      <tbody id="bd-dest-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="bd-page-records">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">All Shipment Records</span>
+      <button class="dl-btn" data-action="downloadBD">⬇ Download Excel</button>
+    </div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="bd-search" placeholder="🔍 AWB / Sender / Receiver / City...">
+      <select class="tbl-sel" id="bd-status-filter"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="bd-origin-filter"><option value="">All Origins</option></select>
+      <select class="tbl-sel" id="bd-dest-filter"><option value="">All Destinations</option></select>
+      <span class="cnt-badge" id="bd-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>AWB / Waybill</th><th>Status</th><th>Origin</th><th>Destination</th>
+        <th>Weight</th><th>Sender</th><th>Receiver</th><th>Booking Date</th><th>Exp. Delivery Date</th><th>Product</th>
+      </tr></thead><tbody id="bd-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="bd-page-insights">
+    <div class="sec-hdr" style="margin-top:4px"><span class="sec-title">💡 Actionable Insights — BlueDart Analysis</span></div>
+    <div class="thoughts-card" id="bd-thoughts-content"></div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════ -->
+<!-- DASHBOARD: INDIA POST -->
+<!-- ═══════════════════════════════════════════════════ -->
+<div id="app-indiapost" class="app-module">
+  <div class="tab-nav">
+    <button class="tab-btn active" data-action="switchTabIP" data-arg="overview">📊 Overview</button>
+    <button class="tab-btn" data-action="switchTabIP" data-arg="records">📋 Records</button>
+    <button class="tab-btn" data-action="switchTabIP" data-arg="insights">💡 Insights</button>
+  </div>
+
+  <div class="page active" id="ip-page-overview">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">Summary Overview</span>
+      <span id="ip-rpt-date" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+    <div class="kpi-grid" id="ip-kpi-grid"></div>
+    <div class="charts-row cr-3e">
+      <div class="chart-card">
+        <div class="cc-title">🚚 Delivery Status</div>
+        <div class="cc-wrap h260"><canvas id="ip-status-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">⚖️ Weight Ranges</div>
+        <div class="cc-wrap h260"><canvas id="ip-weight-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">📮 Article Type</div>
+        <div class="cc-wrap h260"><canvas id="ip-article-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-row cr-2">
+      <div class="chart-card">
+        <div class="cc-title">🏢 Top Destination Offices</div>
+        <div class="cc-wrap h260"><canvas id="ip-dest-chart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">👤 Top Booking Users</div>
+        <div class="cc-wrap h260"><canvas id="ip-user-chart"></canvas></div>
+      </div>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">Top Destination Offices — Ranked</span></div>
+    <div class="tbl-scroll" style="max-height:260px;margin-bottom:20px">
+      <table><thead><tr><th>#</th><th>Office</th><th>Articles</th><th>% of Total</th></tr></thead>
+      <tbody id="ip-dest-tbody"></tbody></table>
+    </div>
+    <div class="sec-hdr"><span class="sec-title">Top Booking Users — Ranked</span></div>
+    <div class="tbl-scroll" style="max-height:260px">
+      <table><thead><tr><th>#</th><th>User</th><th>Articles</th><th>% of Total</th></tr></thead>
+      <tbody id="ip-user-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="ip-page-records">
+    <div class="sec-hdr" style="margin-top:4px">
+      <span class="sec-title">All Article Records</span>
+      <button class="dl-btn" data-action="downloadIP">⬇ Download Excel</button>
+    </div>
+    <div class="tbl-bar">
+      <input type="text" class="tbl-search" id="ip-search" placeholder="🔍 Article No / Office / User...">
+      <select class="tbl-sel" id="ip-status-filter"><option value="">All Statuses</option></select>
+      <select class="tbl-sel" id="ip-office-filter"><option value="">All Destination Offices</option></select>
+      <span class="cnt-badge" id="ip-count"></span>
+    </div>
+    <div class="tbl-scroll">
+      <table><thead><tr>
+        <th>#</th><th>Article Number</th><th>Status</th><th>Booking Office</th><th>Destination Office</th>
+        <th>Weight</th><th>Article Type</th><th>Booked By</th><th>Booking Date</th><th>Delivery Date</th>
+      </tr></thead><tbody id="ip-tbody"></tbody></table>
+    </div>
+  </div>
+
+  <div class="page" id="ip-page-insights">
+    <div class="sec-hdr" style="margin-top:4px"><span class="sec-title">💡 Actionable Insights — India Post Analysis</span></div>
+    <div class="thoughts-card" id="ip-thoughts-content"></div>
+  </div>
+</div>
+
+</div>
+
+<style>
+.fx-shipment-dashboard-scope {
+  --bg:#0b0d12; --surface:#13161f; --surface2:#1a1e2b; --surface3:#20253a;
+  --border:#252a3a; --border2:#2e3550;
+  --accent:#4f8ef7; --accent2:#7c5cfc; --green:#22c55e; --orange:#f59e0b;
+  --red:#ef4444; --cyan:#06b6d4; --pink:#ec4899;
+  --text:#e8eaf2; --muted:#6b7280; --muted2:#9ca3af;
+  --r:12px; --font:'Segoe UI',system-ui,sans-serif;
+
+  display:block;
+  background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;
+}
+.fx-shipment-dashboard-scope *{box-sizing:border-box;margin:0;padding:0}
+.fx-shipment-dashboard-scope ::-webkit-scrollbar{width:6px;height:6px}
+.fx-shipment-dashboard-scope ::-webkit-scrollbar-track{background:var(--surface)}
+.fx-shipment-dashboard-scope ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* HEADER */
+.fx-shipment-dashboard-scope header{background:linear-gradient(135deg,#0b0f1a 0%,#131828 100%);border-bottom:1px solid var(--border);padding:14px 28px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.fx-shipment-dashboard-scope .logo{display:flex;align-items:center;gap:12px}
+.fx-shipment-dashboard-scope .logo-badge{width:40px;height:40px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;letter-spacing:1px}
+.fx-shipment-dashboard-scope .logo h1{font-size:17px;font-weight:700}
+.fx-shipment-dashboard-scope .logo p{font-size:11px;color:var(--muted);margin-top:1px}
+.fx-shipment-dashboard-scope .hdr-right{display:flex;align-items:center;gap:12px}
+.fx-shipment-dashboard-scope .pulse{width:8px;height:8px;background:var(--green);border-radius:50%;animation:fxShipDashPulse 2s infinite}
+@keyframes fxShipDashPulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(34,197,94,.4)}50%{opacity:.6;box-shadow:0 0 0 6px rgba(34,197,94,0)}}
+.fx-shipment-dashboard-scope .hdr-date{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:5px 12px;font-size:12px;color:var(--muted2)}
+
+/* NAV TABS */
+.fx-shipment-dashboard-scope .tab-nav{display:flex;gap:0;background:var(--surface2);border-bottom:1px solid var(--border);padding:0 28px;overflow-x:auto}
+.fx-shipment-dashboard-scope .tab-btn{padding:12px 20px;font-size:13px;font-weight:600;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap;transition:all .2s}
+.fx-shipment-dashboard-scope .tab-btn:hover{color:var(--text)}
+.fx-shipment-dashboard-scope .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* UPLOAD */
+.fx-shipment-dashboard-scope #upload-section{margin:40px auto;max-width:820px;padding:0 24px}
+.fx-shipment-dashboard-scope .upload-zone{border:2px dashed var(--border2);border-radius:18px;padding:52px 40px;text-align:center;cursor:pointer;transition:all .3s;background:var(--surface)}
+.fx-shipment-dashboard-scope .upload-zone:hover,.fx-shipment-dashboard-scope .upload-zone.drag{border-color:var(--accent);background:rgba(79,142,247,.05)}
+.fx-shipment-dashboard-scope .up-icon{font-size:52px;margin-bottom:18px}
+.fx-shipment-dashboard-scope .upload-zone h3{font-size:20px;font-weight:700;margin-bottom:10px}
+.fx-shipment-dashboard-scope .upload-zone p{color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:24px}
+.fx-shipment-dashboard-scope .up-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.fx-shipment-dashboard-scope .up-btn:hover{opacity:.85}
+.fx-shipment-dashboard-scope #file-input{display:none}
+.fx-shipment-dashboard-scope .file-info{margin-top:14px;color:var(--green);font-size:13px;font-weight:600}
+.fx-shipment-dashboard-scope #prog-wrap{margin-top:16px;display:none}
+.fx-shipment-dashboard-scope #prog-bar{height:4px;background:var(--border);border-radius:4px;overflow:hidden}
+.fx-shipment-dashboard-scope #prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .4s;border-radius:4px}
+.fx-shipment-dashboard-scope .up-features{display:flex;justify-content:center;gap:28px;margin-top:24px;flex-wrap:wrap}
+.fx-shipment-dashboard-scope .up-feat{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px}
+
+/* MAIN */
+.fx-shipment-dashboard-scope .app-module{display:none}
+.fx-shipment-dashboard-scope .slot-zone{background:var(--surface);border:2px dashed var(--border2);border-radius:16px;padding:24px 18px;text-align:center;transition:all .2s}
+.fx-shipment-dashboard-scope .slot-zone.loaded{border-style:solid;border-color:var(--green)}
+.fx-shipment-dashboard-scope .slot-zone.error{border-style:solid;border-color:var(--red)}
+.fx-shipment-dashboard-scope .slot-status{margin-top:10px;font-size:11px;color:var(--muted);word-break:break-word}
+.fx-shipment-dashboard-scope .slot-zone.loaded .slot-status{color:var(--green);font-weight:600}
+.fx-shipment-dashboard-scope .slot-zone.error .slot-status{color:var(--red);font-weight:600}
+.fx-shipment-dashboard-scope #master-nav{background:var(--surface2);border-bottom:1px solid var(--border);padding:0 28px;display:flex;gap:0;overflow-x:auto}
+.fx-shipment-dashboard-scope .master-tab{padding:14px 22px;font-size:13px;font-weight:700;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+.fx-shipment-dashboard-scope .master-tab:hover{color:var(--text)}
+.fx-shipment-dashboard-scope .master-tab.active{color:#fff;border-bottom-color:var(--accent2)}
+.fx-shipment-dashboard-scope .page{display:none;padding:24px 28px;max-width:1440px;margin:0 auto}
+.fx-shipment-dashboard-scope .page.active{display:block}
+
+/* KPI GRID */
+.fx-shipment-dashboard-scope .kpi-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px}
+.fx-shipment-dashboard-scope .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 16px;position:relative;overflow:hidden;transition:border-color .2s}
+.fx-shipment-dashboard-scope .kpi:hover{border-color:var(--border2)}
+.fx-shipment-dashboard-scope .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--ka)}
+.fx-shipment-dashboard-scope .kpi-icon{position:absolute;top:14px;right:14px;font-size:20px;opacity:.2}
+.fx-shipment-dashboard-scope .kpi-label{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.fx-shipment-dashboard-scope .kpi-val{font-size:26px;font-weight:900;color:var(--text);line-height:1}
+.fx-shipment-dashboard-scope .kpi-sub{font-size:11px;color:var(--muted);margin-top:5px}
+
+/* CHARTS */
+.fx-shipment-dashboard-scope .charts-row{display:grid;gap:14px;margin-bottom:20px}
+.fx-shipment-dashboard-scope .cr-3{grid-template-columns:2fr 1fr 1fr}
+.fx-shipment-dashboard-scope .cr-2{grid-template-columns:1fr 1fr}
+.fx-shipment-dashboard-scope .cr-3e{grid-template-columns:1fr 1fr 1fr}
+.fx-shipment-dashboard-scope .chart-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px}
+.fx-shipment-dashboard-scope .cc-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.fx-shipment-dashboard-scope .cc-wrap{position:relative;height:200px}
+.fx-shipment-dashboard-scope .cc-wrap.h260{height:260px}
+
+/* TAT BREACH TABLE */
+.fx-shipment-dashboard-scope .tat-section{margin-bottom:20px}
+.fx-shipment-dashboard-scope .tat-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px}
+.fx-shipment-dashboard-scope .tat-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.fx-shipment-dashboard-scope .tat-tab{padding:7px 16px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--muted2);transition:all .2s}
+.fx-shipment-dashboard-scope .tat-tab:hover{border-color:var(--border2);color:var(--text)}
+.fx-shipment-dashboard-scope .tat-tab.active{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:transparent;color:#fff}
+.fx-shipment-dashboard-scope .tat-tab .cnt{margin-left:6px;background:rgba(255,255,255,.15);padding:1px 7px;border-radius:10px;font-size:11px}
+
+/* DISPATCH/DELIVER DATE PICKER */
+.fx-shipment-dashboard-scope .date-picker-row{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+.fx-shipment-dashboard-scope .date-picker-row label{font-size:13px;font-weight:600;color:var(--muted2);white-space:nowrap}
+.fx-shipment-dashboard-scope .date-sel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 14px;font-size:13px;cursor:pointer;min-width:160px}
+.fx-shipment-dashboard-scope .date-sel:focus{outline:none;border-color:var(--accent)}
+.fx-shipment-dashboard-scope .view-btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;border-radius:8px;padding:8px 20px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+.fx-shipment-dashboard-scope .view-btn:hover{opacity:.85}
+
+/* TABLE */
+.fx-shipment-dashboard-scope .tbl-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.fx-shipment-dashboard-scope .tbl-search{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 14px;font-size:13px;width:220px}
+.fx-shipment-dashboard-scope .tbl-search::placeholder{color:var(--muted)}
+.fx-shipment-dashboard-scope .tbl-search:focus{outline:none;border-color:var(--accent)}
+.fx-shipment-dashboard-scope .tbl-sel{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 12px;font-size:12px;cursor:pointer}
+.fx-shipment-dashboard-scope .tbl-sel:focus{outline:none;border-color:var(--accent)}
+.fx-shipment-dashboard-scope .cnt-badge{font-size:12px;color:var(--muted);margin-left:auto}
+.fx-shipment-dashboard-scope .dl-btn{display:flex;align-items:center;gap:7px;background:linear-gradient(135deg,var(--green),#16a34a);color:#fff;border:none;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:opacity .2s;white-space:nowrap}
+.fx-shipment-dashboard-scope .dl-btn:hover{opacity:.85}
+
+.fx-shipment-dashboard-scope .tbl-scroll{max-height:440px;overflow-y:auto;overflow-x:auto}
+.fx-shipment-dashboard-scope table{width:100%;border-collapse:collapse;font-size:12px}
+.fx-shipment-dashboard-scope th{padding:9px 12px;text-align:left;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.05em;text-transform:uppercase;border-bottom:1px solid var(--border);white-space:nowrap;background:var(--surface2);position:sticky;top:0;z-index:2}
+.fx-shipment-dashboard-scope td{padding:10px 12px;border-bottom:1px solid rgba(37,42,58,.4);white-space:nowrap}
+.fx-shipment-dashboard-scope tr:hover td{background:rgba(255,255,255,.02)}
+
+/* BADGES */
+.fx-shipment-dashboard-scope .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700}
+.fx-shipment-dashboard-scope .b-del{background:rgba(34,197,94,.15);color:var(--green)}
+.fx-shipment-dashboard-scope .b-it{background:rgba(79,142,247,.15);color:var(--accent)}
+.fx-shipment-dashboard-scope .b-ofd{background:rgba(124,92,252,.15);color:var(--accent2)}
+.fx-shipment-dashboard-scope .b-ndr{background:rgba(245,158,11,.15);color:var(--orange)}
+.fx-shipment-dashboard-scope .b-rto{background:rgba(239,68,68,.15);color:var(--red)}
+.fx-shipment-dashboard-scope .b-rtodel{background:rgba(236,72,153,.15);color:var(--pink)}
+.fx-shipment-dashboard-scope .b-can{background:rgba(107,114,128,.15);color:var(--muted2)}
+.fx-shipment-dashboard-scope .b-op{background:rgba(6,182,212,.15);color:var(--cyan)}
+.fx-shipment-dashboard-scope .b-pk{background:rgba(168,85,247,.15);color:#a855f7}
+.fx-shipment-dashboard-scope .b-sd{background:rgba(239,68,68,.15);color:var(--red)}
+.fx-shipment-dashboard-scope .b-cod{background:rgba(245,158,11,.12);color:var(--orange)}
+.fx-shipment-dashboard-scope .b-pre{background:rgba(79,142,247,.12);color:var(--accent)}
+.fx-shipment-dashboard-scope .b-ontime{background:rgba(34,197,94,.15);color:var(--green)}
+.fx-shipment-dashboard-scope .b-late{background:rgba(239,68,68,.15);color:var(--red)}
+.fx-shipment-dashboard-scope .b-ndrflag{background:rgba(245,158,11,.15);color:var(--orange)}
+.fx-shipment-dashboard-scope .b-noissue{background:rgba(107,114,128,.12);color:var(--muted2)}
+
+.fx-shipment-dashboard-scope .tag-chip{display:inline-block;padding:2px 7px;border-radius:5px;font-size:9px;font-weight:700;margin:1px}
+.fx-shipment-dashboard-scope .t-addr{background:rgba(239,68,68,.12);color:#f87171}
+.fx-shipment-dashboard-scope .t-esc{background:rgba(245,158,11,.12);color:#fbbf24}
+.fx-shipment-dashboard-scope .t-lbl{background:rgba(6,182,212,.12);color:#22d3ee}
+.fx-shipment-dashboard-scope .t-fb{background:rgba(34,197,94,.12);color:#4ade80}
+
+/* SUMMARY STAT BAR */
+.fx-shipment-dashboard-scope .stat-bar{display:flex;gap:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;margin-bottom:14px;flex-wrap:wrap}
+.fx-shipment-dashboard-scope .stat-item{flex:1;min-width:110px;padding:12px 16px;border-right:1px solid var(--border);text-align:center}
+.fx-shipment-dashboard-scope .stat-item:last-child{border-right:none}
+.fx-shipment-dashboard-scope .stat-val{font-size:18px;font-weight:900;color:var(--text)}
+.fx-shipment-dashboard-scope .stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:2px}
+
+/* SECTION HEADER */
+.fx-shipment-dashboard-scope .sec-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.fx-shipment-dashboard-scope .sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
+
+/* THOUGHTS CARD */
+.fx-shipment-dashboard-scope .thoughts-card{background:linear-gradient(135deg,rgba(79,142,247,.08),rgba(124,92,252,.08));border:1px solid rgba(79,142,247,.2);border-radius:var(--r);padding:20px;margin-bottom:20px}
+.fx-shipment-dashboard-scope .thoughts-card h3{font-size:14px;font-weight:700;color:var(--accent);margin-bottom:12px}
+.fx-shipment-dashboard-scope .thought-item{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid rgba(79,142,247,.1)}
+.fx-shipment-dashboard-scope .thought-item:last-child{border-bottom:none}
+.fx-shipment-dashboard-scope .thought-num{width:24px;height:24px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;flex-shrink:0;margin-top:1px}
+.fx-shipment-dashboard-scope .thought-content h4{font-size:13px;font-weight:700;color:var(--text);margin-bottom:3px}
+.fx-shipment-dashboard-scope .thought-content p{font-size:12px;color:var(--muted2);line-height:1.5}
+.fx-shipment-dashboard-scope .thought-pill{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;margin-right:4px}
+.fx-shipment-dashboard-scope .p-warn{background:rgba(239,68,68,.12);color:var(--red)}
+.fx-shipment-dashboard-scope .p-ok{background:rgba(34,197,94,.12);color:var(--green)}
+.fx-shipment-dashboard-scope .p-info{background:rgba(79,142,247,.12);color:var(--accent)}
+
+@media(max-width:768px){
+  .fx-shipment-dashboard-scope .cr-3,.fx-shipment-dashboard-scope .cr-2,.fx-shipment-dashboard-scope .cr-3e{grid-template-columns:1fr}
+  .fx-shipment-dashboard-scope header{padding:10px 14px}
+  .fx-shipment-dashboard-scope .page{padding:12px 14px}
+  .fx-shipment-dashboard-scope .tab-nav{padding:0 14px}
+}
+</style>

@@ -158,6 +158,22 @@
           </a>
           }
 
+          @if(canViewOperations()) {
+            @for(grp of opsGroups; track grp.group) {
+              <p class="px-3 mt-4 mb-2 text-xs font-bold uppercase tracking-widest" style="color: rgba(253,181,21,0.3);">{{ grp.group }}</p>
+              @for(item of grp.items; track item.key) {
+                <a [routerLink]="['/ops', item.path]" routerLinkActive="uath-active-nav"
+                    class="uath-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style="color: rgba(253,181,21,0.7);" [title]="item.description || item.menuLabel">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 uath-icon-bg">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" [attr.d]="featureIconPath(item.icon)"/></svg>
+                    </div>
+                    {{ item.menuLabel }}
+                </a>
+              }
+            }
+          }
+
         } @else {
           <div class="space-y-1 px-1 animate-pulse">
             @for(_ of [1,2,3,4,5]; track $index) {
@@ -331,6 +347,22 @@
               </div>
               HW Inventory
           </a>
+          }
+
+          @if(canViewOperations()) {
+            @for(grp of opsGroups; track grp.group) {
+              <p class="px-3 mt-4 mb-2 text-xs font-bold uppercase tracking-widest" style="color: rgba(253,181,21,0.3);">{{ grp.group }}</p>
+              @for(item of grp.items; track item.key) {
+                <a [routerLink]="['/ops', item.path]" routerLinkActive="uath-active-nav"
+                    class="uath-nav-link flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all"
+                    style="color: rgba(253,181,21,0.7);" [title]="item.description || item.menuLabel">
+                    <div class="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 uath-icon-bg">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" [attr.d]="featureIconPath(item.icon)"/></svg>
+                    </div>
+                    {{ item.menuLabel }}
+                </a>
+              }
+            }
           }
 
         } @else {

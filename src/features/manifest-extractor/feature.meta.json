@@ -1,0 +1,11 @@
+{
+  "key": "manifest-extractor",
+  "title": "Manifest → Order Sheet Extractor",
+  "menuLabel": "Manifest Extractor",
+  "path": "manifest-extractor",
+  "icon": "file-text",
+  "group": "Operations Tools",
+  "order": 40,
+  "enabled": true,
+  "description": "Extract airwaybill / order number / weight from courier manifest PDFs into a downloadable order sheet"
+}

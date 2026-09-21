@@ -1,0 +1,11 @@
+{
+  "key": "store-orders",
+  "title": "Uathayam & Ariser Store Orders Portal",
+  "menuLabel": "Store Orders",
+  "path": "store-orders",
+  "icon": "shopping-bag",
+  "group": "Operations Tools",
+  "order": 30,
+  "enabled": true,
+  "description": "Consolidated Shopify order insights, fulfillment tracking and pick lists for both stores"
+}

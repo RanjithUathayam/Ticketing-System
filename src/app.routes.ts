@@ -1,6 +1,8 @@
 // src/app.routes.ts  (UPDATED — customer-entry routes added)
 import { Routes } from '@angular/router';
 import { AuthGuard } from './guards/auth.guard';
+import { OpsGuard } from './guards/ops.guard';
+import { featureRoutes } from './features/features.generated';
 
 export const appRoutes: Routes = [
   {
@@ -68,10 +70,19 @@ export const appRoutes: Routes = [
         path: 'hw-inventory',
         loadComponent: () => import('./components/hw-inventory-list/hw-inventory-list.component').then(c => c.HwInventoryListComponent)
         },
-        { 
-            path: 'hw-inventory/:id',   
-            loadComponent: () => import('./components/inventory-form/inventory-form.component').then(c => c.HwInventoryFormComponent) 
+        {
+            path: 'hw-inventory/:id',
+            loadComponent: () => import('./components/inventory-form/inventory-form.component').then(c => c.HwInventoryFormComponent)
         },
+      // ── Operations Tools (auto-discovered — see src/features/README.md) ──
+      // New pages under src/features/<key>/ appear here automatically after
+      // `npm run generate:features` (wired into predev/prebuild); this
+      // single block is the only manual wiring auto-discovery ever needs.
+      {
+        path: 'ops',
+        canActivate: [OpsGuard],
+        children: featureRoutes,
+      },
     ]
   },
   { path: '**', redirectTo: '/login' }

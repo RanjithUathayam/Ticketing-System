@@ -1,56 +1,99 @@
 // src/services/hw-inventory-export.service.ts
 import { Injectable } from '@angular/core';
-import { HWAsset } from '../hw-inventory.models';
+import * as XLSX from 'xlsx';
+import { HWAsset, HWCategory, WarrantyStatus, OSVersion } from '../hw-inventory.models';
+import { HW_TEMPLATE_COLUMNS } from '../hw-inventory-template';
+
+// Maps our internal HWCategory to the template's "Asset Type" dropdown values.
+// Categories with no equivalent in the template dropdown (e.g. "Other") are left blank
+// rather than guessed, since the template requires an exact dropdown match.
+const ASSET_TYPE_MAP: Partial<Record<HWCategory, string>> = {
+  Desktop: 'DESKTOP',
+  Laptop:  'LAPTOP',
+  Printer: 'PRINTER',
+  Scanner: 'SCANNER',
+};
+
+// Maps our internal WarrantyStatus to the template's "Warranty" dropdown values
+// (AMC / OUT OF WARRANTY / WARRANTY). "Expired" has no exact equivalent; it's
+// treated as out of warranty. "Unknown" is left blank.
+const WARRANTY_MAP: Partial<Record<WarrantyStatus, string>> = {
+  'In Warranty':     'WARRANTY',
+  'Out of Warranty': 'OUT OF WARRANTY',
+  'Expired':         'OUT OF WARRANTY',
+};
+
+// Maps our internal OSVersion to the template's "OS" dropdown values.
+const OS_MAP: Partial<Record<OSVersion, string>> = {
+  'Windows 10': 'Windows 10',
+  'Windows 11': 'Windows 11',
+  'N/A':        'NA',
+};
 
 @Injectable({ providedIn: 'root' })
 export class HwInventoryExportService {
 
   // ── Public API ────────────────────────────────────────────────────────────
 
+  /** Exports assets as a real .xlsx workbook laid out to match asset_import_template.csv exactly. */
   exportToExcel(assets: HWAsset[], filename = 'hardware-inventory'): void {
-    const headers = [
-      'Asset ID', 'Category', 'Manufacturer', 'Model', 'Serial Number',
-      'Location', 'Floor', 'Department', 'Assigned To', 'Place',
-      'Processor', 'RAM (GB)', 'HDD (GB/TB)', 'SSD (GB/TB)', 'OS', 'IP Address',
-      'Status', 'Warranty Status', 'Warranty Expiry', 'Antivirus', 'Remarks', 'Created At',
-    ];
+    const rows = assets.map(a => this.toTemplateRow(a));
+    const sheetData = [HW_TEMPLATE_COLUMNS, ...rows];
 
-    const rows = assets.map(a => [
-      a.assetId,
-      a.category,
-      a.manufacturer,
-      a.model,
-      a.serialNumber,
-      a.location,
-      a.floor ?? '',
-      a.department ?? '',
-      a.assignedTo ?? '',
-      a.place ?? '',
-      a.processor ?? '',
-      a.ramGb ?? '',
-      a.hddGbTb ?? '',
-      a.ssdGbTb ?? '',
-      a.os ?? '',
-      a.ipAddress ?? '',
-      a.status,
-      a.warrantyStatus,
-      this.fmtDate(a.warrantyExpiry),
-      a.antivirusActive === true ? 'Yes' : a.antivirusActive === false ? 'No' : '',
-      a.remarks ?? '',
-      this.fmtDate(a.createdAt),
-    ]);
+    const worksheet  = XLSX.utils.aoa_to_sheet(sheetData);
+    const workbook   = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Hardware Inventory');
 
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
-      .join('\r\n');
+    XLSX.writeFile(workbook, `${filename}-${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }
 
-    const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url  = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href     = url;
-    link.download = `${filename}-${new Date().toISOString().slice(0, 10)}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  // ── Template row mapping ─────────────────────────────────────────────────
+
+  private toTemplateRow(a: HWAsset): string[] {
+    const values: Partial<Record<string, string>> = {
+      'Asset Type':        ASSET_TYPE_MAP[a.category] ?? '',
+      'Make':              a.manufacturer ?? '',
+      'Model':             a.model ?? '',
+      'Serial No':         a.serialNumber ?? '',
+      'Host Name':         a.assetId ?? '',
+      'Warranty':          WARRANTY_MAP[a.warrantyStatus] ?? '',
+      'Expiry Date':       this.fmtDateIso(a.warrantyExpiry),
+      'OS':                (a.os && OS_MAP[a.os]) ?? '',
+      'Processor':         a.processor ?? '',
+      'RAM Size':          this.normalizeSizeUnit(a.ramGb),
+      'Storage Size':      this.combineStorage(a.ssdGbTb, a.hddGbTb),
+      'Allocated Name':    a.assignedTo ?? '',
+      'Allocated Dept':    a.department ?? '',
+      'Allocated Location': this.combineLocation(a.location, a.floor, a.place),
+      'Remarks':           a.remarks ?? '',
+      'LAN IP Address':    a.ipAddress ?? '',
+    };
+
+    return HW_TEMPLATE_COLUMNS.map(col => values[col] ?? '');
+  }
+
+  private normalizeSizeUnit(value?: string | null): string {
+    if (!value) return '';
+    const trimmed = value.trim();
+    const match = trimmed.match(/^(\d+(?:\.\d+)?)\s*(GB|TB|MB)$/i);
+    return match ? `${match[1]} ${match[2].toUpperCase()}` : trimmed;
+  }
+
+  private combineStorage(ssd?: string | null, hdd?: string | null): string {
+    const ssdN = ssd ? this.normalizeSizeUnit(ssd) : '';
+    const hddN = hdd ? this.normalizeSizeUnit(hdd) : '';
+    if (ssdN && hddN) return `${ssdN} + ${hddN}`;
+    return ssdN || hddN;
+  }
+
+  private combineLocation(location?: string | null, floor?: string | null, place?: string | null): string {
+    return [location, floor, place].filter(v => !!v).join(', ');
+  }
+
+  private fmtDateIso(d?: string | null): string {
+    if (!d) return '';
+    const dt = new Date(d);
+    return isNaN(dt.getTime()) ? '' : dt.toISOString().slice(0, 10);
   }
 
   printReport(assets: HWAsset[]): void {

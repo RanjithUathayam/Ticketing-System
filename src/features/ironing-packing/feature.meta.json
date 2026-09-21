@@ -1,0 +1,11 @@
+{
+  "key": "ironing-packing",
+  "title": "Ironing & Packing Operations Console",
+  "menuLabel": "Ironing & Packing",
+  "path": "ironing-packing",
+  "icon": "iron",
+  "group": "Operations Tools",
+  "order": 10,
+  "enabled": true,
+  "description": "Compute packaging material quantities from ironing service orders"
+}

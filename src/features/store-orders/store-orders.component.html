@@ -1,0 +1,868 @@
+<div class="container fx-store-orders-scope" #root>
+    <!-- Header -->
+    <div class="header">
+        <h1>📦 Uathayam & Ariser Unified Orders Portal</h1>
+        <p>Dual-Store Ingestion, Operational Audits, Deep Insights, SKU Pick Lists & Pan-India Deliveries</p>
+    </div>
+
+    <!-- Separate Store Upload Section -->
+    <div class="upload-wrapper">
+        <div class="dual-upload-grid">
+            <!-- Uathayam Box -->
+            <div class="store-upload-card uathayam">
+                <div class="store-upload-header">
+                    <h3>🏷️ Uathayam Shopify Export</h3>
+                    <span class="brand-pill brand-uathayam">Primary Store</span>
+                </div>
+                <input type="file" id="uathayamFile" accept=".csv" />
+                <small style="color: var(--text-muted);">Select <code>orders_export_1.csv</code></small>
+            </div>
+
+            <!-- Ariser Box -->
+            <div class="store-upload-card ariser">
+                <div class="store-upload-header">
+                    <h3>🏷️ Ariser Shopify Export</h3>
+                    <span class="brand-pill brand-ariser">Secondary Store</span>
+                </div>
+                <input type="file" id="ariserFile" accept=".csv" />
+                <small style="color: var(--text-muted);">Select <code>Ariser order 01.09.2026 to 10.09.2026.csv</code></small>
+            </div>
+        </div>
+
+        <div class="upload-actions">
+            <button class="btn btn-primary" type="button">⚡ Process & Merge Stores Data</button>
+            <div id="fileUploadSummary" class="file-list"></div>
+        </div>
+        <div id="alertSuccess" class="alert-box alert-success"></div>
+        <div id="alertError" class="alert-box alert-error"></div>
+    </div>
+
+    <div id="dashboardContent" style="display: none;">
+        <!-- Tab Navigation Bar -->
+        <div class="tab-bar">
+            <button class="tab-btn active" type="button">💡 Executive Insights</button>
+            <button class="tab-btn" type="button">📋 Consolidated Order Master</button>
+            <button class="tab-btn" type="button">📅 Date-Wise Overview</button>
+            <button class="tab-btn" type="button">⏳ Unfulfilled (Date & SKU Pick List)</button>
+            <button class="tab-btn" type="button">📍 Geographic Hub (State/City/PIN)</button>
+        </div>
+
+        <!-- Insights KPI Matrix Bar -->
+        <div class="insights-grid" id="insightsGrid"></div>
+
+        <!-- Dynamic Global Filters -->
+        <div class="filters-section">
+            <div class="filter-group">
+                <label for="brandFilter">Store / Brand</label>
+                <select id="brandFilter">
+                    <option value="">All Brands (Uathayam + Ariser)</option>
+                    <option value="Uathayam">Uathayam Only</option>
+                    <option value="Ariser">Ariser Only</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="fulfillmentFilter">Order Status</label>
+                <select id="fulfillmentFilter">
+                    <option value="">All Orders</option>
+                    <option value="fulfilled">Fulfilled</option>
+                    <option value="unfulfilled">Unfulfilled</option>
+                    <option value="pending">Pending</option>
+                    <option value="cancel">Cancelled</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="financialFilter">Payment Mode</label>
+                <select id="financialFilter">
+                    <option value="">All Types</option>
+                    <option value="paid">Prepaid (Paid)</option>
+                    <option value="cod">COD (Cash on Delivery)</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="startDateFilter">From Date</label>
+                <input type="date" id="startDateFilter" />
+            </div>
+            <div class="filter-group">
+                <label for="endDateFilter">To Date</label>
+                <input type="date" id="endDateFilter" />
+            </div>
+            <div class="filter-group">
+                <label for="searchFilter">Search Keyword</label>
+                <input type="text" id="searchFilter" placeholder="SKU, Order #, City, Name..." />
+            </div>
+            <div class="filter-group">
+                <button class="btn btn-secondary" type="button">Reset All</button>
+            </div>
+        </div>
+
+        <!-- Tab 1: Executive Insights Tab -->
+        <div id="insights-tab" class="tab-content active">
+            <div class="insights-section">
+                <div class="insights-top-grid">
+                    <!-- Card 1: Brand Comparison -->
+                    <div class="intel-card">
+                        <h3>⚖️ Brand Comparison Summary</h3>
+                        <div class="intel-row">
+                            <span class="intel-label">Total Valid Orders</span>
+                            <span class="intel-val" id="insTotalOrders">0</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Uathayam Share</span>
+                            <span class="intel-val" id="insUathayamShare">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Ariser Share</span>
+                            <span class="intel-val" id="insAriserShare">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Uathayam AOV</span>
+                            <span class="intel-val" id="insUathayamAOV">₹0.00</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Ariser AOV</span>
+                            <span class="intel-val" id="insAriserAOV">₹0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Payment & Risk -->
+                    <div class="intel-card">
+                        <h3>💳 Payment Distribution & Risk</h3>
+                        <div class="intel-row">
+                            <span class="intel-label">Prepaid Rate (UPI/Cards)</span>
+                            <span class="intel-val" id="insPrepaidRate" style="color: #60a5fa;">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">COD Rate (RTO Exposure)</span>
+                            <span class="intel-val" id="insCODRate" style="color: #c084fc;">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Cancellation Rate</span>
+                            <span class="intel-val" id="insCancelRate" style="color: #f87171;">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Prepaid Volume</span>
+                            <span class="intel-val" id="insPrepaidCount">0 orders</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">COD Volume</span>
+                            <span class="intel-val" id="insCODCount">0 orders</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Fulfillment Health -->
+                    <div class="intel-card">
+                        <h3>🚚 Fulfillment Pipeline Health</h3>
+                        <div class="intel-row">
+                            <span class="intel-label">Fulfillment Dispatch Rate</span>
+                            <span class="intel-val" id="insFulfillmentRate" style="color: #34d399;">0%</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Pending Backlog Count</span>
+                            <span class="intel-val" id="insPendingCount" style="color: #fbbf24;">0 orders</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Pending Order Value</span>
+                            <span class="intel-val" id="insPendingValue">₹0.00</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">Prepaid Pending (High Priority)</span>
+                            <span class="intel-val" id="insPrepaidPending" style="color: #60a5fa;">0</span>
+                        </div>
+                        <div class="intel-row">
+                            <span class="intel-label">COD Pending</span>
+                            <span class="intel-val" id="insCODPending" style="color: #c084fc;">0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top 10 Pending SKUs Table -->
+                <div class="intel-card">
+                    <div class="table-header" style="margin-bottom: 8px;">
+                        <h3>📦 Top Warehouse Priority Pick SKUs (Unfulfilled Orders)</h3>
+                        <span class="badge-count" id="insTopSKUCount">Top SKUs</span>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Brand</th>
+                                <th>SKU Code</th>
+                                <th>Product Name</th>
+                                <th>Pending Qty to Pick</th>
+                            </tr>
+                        </thead>
+                        <tbody id="insTopSKUTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Orders Registry -->
+        <div id="orders-tab" class="tab-content">
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Consolidated Orders Registry</h2>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button class="btn btn-success" type="button">📥 Download Master Excel (.xlsx)</button>
+                        <span class="badge-count" id="recordCount">0 orders</span>
+                    </div>
+                </div>
+                <table id="ordersTable">
+                    <thead>
+                        <tr>
+                            <th>Store</th>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Customer Name</th>
+                            <th>City</th>
+                            <th>State</th>
+                            <th>PIN</th>
+                            <th>Qty</th>
+                            <th>Total (₹)</th>
+                            <th>Payment</th>
+                            <th>Fulfillment</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 3: Date-Wise Overview -->
+        <div id="datewise-tab" class="tab-content">
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Date-Wise Order Flow (Uathayam & Ariser)</h2>
+                    <button class="btn btn-success" type="button">📥 Download Date Report (.xlsx)</button>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Total Orders</th>
+                            <th>Uathayam</th>
+                            <th>Ariser</th>
+                            <th>Prepaid</th>
+                            <th>COD</th>
+                            <th>Fulfilled</th>
+                            <th>Unfulfilled</th>
+                            <th>Cancelled</th>
+                            <th>Revenue (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dateWiseTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 4: Unfulfilled Breakdown & Pick List -->
+        <div id="unfulfilled-tab" class="tab-content">
+            <div class="table-section">
+                <div class="table-header">
+                    <h2>Date-Wise Pending Summary</h2>
+                    <button class="btn btn-success" type="button">📥 Download Summary (.xlsx)</button>
+                </div>
+                <table style="margin-bottom: 35px;">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Total Unfulfilled</th>
+                            <th>Prepaid Pending</th>
+                            <th>COD Pending</th>
+                            <th>Pending Value (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unfulfilledDateTableBody"></tbody>
+                </table>
+
+                <div class="table-header">
+                    <h2>Unfulfilled Orders: Order-Wise SKU Pick List</h2>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <button class="btn btn-success" type="button">📥 Download Order-Wise SKU Excel (.xlsx)</button>
+                        <span class="badge-count" id="unfulfilledOrderCount">0 orders</span>
+                    </div>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Store</th>
+                            <th>Order #</th>
+                            <th>Date</th>
+                            <th>Customer Name</th>
+                            <th>City</th>
+                            <th>Payment</th>
+                            <th>Ordered SKUs (Code x Qty)</th>
+                            <th>Total Qty</th>
+                            <th>Order Value (₹)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="unfulfilledSKUTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tab 5: Geographic Hub -->
+        <div id="geo-tab" class="tab-content">
+            <div class="geo-grid">
+                <div class="geo-card">
+                    <div class="geo-card-header">
+                        <h3>🗺️ By State (Province)</h3>
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8em;" type="button">Export</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>State / Province</th>
+                                <th>Orders</th>
+                                <th>Revenue (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="provinceTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="geo-card">
+                    <div class="geo-card-header">
+                        <h3>🏙️ By Billing City</h3>
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8em;" type="button">Export</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>City</th>
+                                <th>Orders</th>
+                                <th>Revenue (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cityTableBody"></tbody>
+                    </table>
+                </div>
+
+                <div class="geo-card">
+                    <div class="geo-card-header">
+                        <h3>📮 By Pincode (Zip)</h3>
+                        <button class="btn btn-secondary" style="padding: 4px 10px; font-size: 0.8em;" type="button">Export</button>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Pincode (Zip)</th>
+                                <th>Orders</th>
+                                <th>Revenue (₹)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="zipTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .fx-store-orders-scope {
+        --bg-body: #0b0f19;
+        --surface-primary: #111827;
+        --surface-secondary: #1f2937;
+        --surface-tertiary: #374151;
+        --accent-primary: #3b82f6;
+        --accent-hover: #2563eb;
+        --accent-emerald: #10b981;
+        --accent-amber: #f59e0b;
+        --accent-rose: #ef4444;
+        --accent-indigo: #6366f1;
+        --brand-uathayam: #3b82f6;
+        --brand-ariser: #f59e0b;
+        --text-main: #f9fafb;
+        --text-muted: #9ca3af;
+        --border-dim: #1f2937;
+        --border-subtle: #374151;
+        --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+
+        display: block;
+        font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: var(--bg-body);
+        color: var(--text-main);
+        min-height: 100vh;
+        padding: 24px;
+    }
+
+    .fx-store-orders-scope * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    .fx-store-orders-scope .container {
+        max-width: 1600px;
+        margin: 0 auto;
+        background: var(--surface-primary);
+        border-radius: 16px;
+        border: 1px solid var(--border-dim);
+        box-shadow: var(--shadow-md);
+        overflow: hidden;
+    }
+
+    .fx-store-orders-scope .header {
+        background: linear-gradient(180deg, #1e293b 0%, var(--surface-primary) 100%);
+        padding: 28px 36px;
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .fx-store-orders-scope .header h1 {
+        font-size: 1.85em;
+        font-weight: 700;
+        color: #ffffff;
+        letter-spacing: -0.02em;
+    }
+
+    .fx-store-orders-scope .header p {
+        color: var(--text-muted);
+        margin-top: 6px;
+        font-size: 0.95em;
+    }
+
+    /* Separate Upload Section */
+    .fx-store-orders-scope .upload-wrapper {
+        padding: 24px 36px;
+        background: var(--surface-primary);
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .fx-store-orders-scope .dual-upload-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 16px;
+    }
+
+    .fx-store-orders-scope .store-upload-card {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 20px 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .fx-store-orders-scope .store-upload-card.uathayam { border-top: 4px solid var(--brand-uathayam); }
+    .fx-store-orders-scope .store-upload-card.ariser { border-top: 4px solid var(--brand-ariser); }
+
+    .fx-store-orders-scope .store-upload-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .fx-store-orders-scope .store-upload-header h3 {
+        font-size: 1.05em;
+        font-weight: 700;
+        color: #ffffff;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .fx-store-orders-scope .store-upload-card input[type="file"] {
+        background: var(--surface-primary);
+        color: var(--text-muted);
+        border: 1px solid var(--border-subtle);
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-size: 0.88em;
+        cursor: pointer;
+        width: 100%;
+    }
+
+    .fx-store-orders-scope .upload-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .fx-store-orders-scope .btn {
+        border: none;
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-size: 0.92em;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .fx-store-orders-scope .btn-primary { background-color: var(--accent-primary); color: #fff; }
+    .fx-store-orders-scope .btn-primary:hover { background-color: var(--accent-hover); }
+    .fx-store-orders-scope .btn-success { background-color: var(--accent-emerald); color: #fff; }
+    .fx-store-orders-scope .btn-success:hover { background-color: #059669; }
+    .fx-store-orders-scope .btn-secondary { background-color: var(--surface-tertiary); color: var(--text-main); }
+    .fx-store-orders-scope .btn-secondary:hover { background-color: #4b5563; }
+
+    .fx-store-orders-scope .tab-bar {
+        display: flex;
+        background: var(--surface-secondary);
+        border-bottom: 1px solid var(--border-dim);
+        padding: 0 36px;
+        gap: 6px;
+        overflow-x: auto;
+    }
+
+    .fx-store-orders-scope .tab-btn {
+        background: transparent;
+        color: var(--text-muted);
+        border: none;
+        padding: 16px 18px;
+        font-size: 0.9em;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 3px solid transparent;
+        white-space: nowrap;
+        transition: all 0.2s ease;
+    }
+
+    .fx-store-orders-scope .tab-btn.active {
+        color: var(--accent-primary);
+        border-bottom-color: var(--accent-primary);
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .fx-store-orders-scope .tab-btn:hover:not(.active) { color: var(--text-main); }
+
+    .fx-store-orders-scope .tab-content { display: none; }
+    .fx-store-orders-scope .tab-content.active { display: block; }
+
+    .fx-store-orders-scope .insights-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 14px;
+        padding: 24px 36px;
+        background: var(--surface-primary);
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .fx-store-orders-scope .insight-card {
+        background: var(--surface-secondary);
+        padding: 16px 18px;
+        border-radius: 10px;
+        border: 1px solid var(--border-subtle);
+    }
+
+    .fx-store-orders-scope .insight-card.uathayam-card { border-left: 4px solid var(--brand-uathayam); }
+    .fx-store-orders-scope .insight-card.ariser-card { border-left: 4px solid var(--brand-ariser); }
+
+    .fx-store-orders-scope .insight-card h3 {
+        color: var(--text-muted);
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 6px;
+    }
+
+    .fx-store-orders-scope .insight-card .value {
+        font-size: 1.65em;
+        font-weight: 700;
+        color: #ffffff;
+    }
+
+    .fx-store-orders-scope .insight-card .subtext {
+        color: var(--text-muted);
+        font-size: 0.78em;
+        margin-top: 4px;
+    }
+
+    .fx-store-orders-scope .filters-section {
+        padding: 18px 36px;
+        background: var(--surface-secondary);
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+        border-bottom: 1px solid var(--border-dim);
+        align-items: flex-end;
+    }
+
+    .fx-store-orders-scope .filter-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .fx-store-orders-scope .filter-group label {
+        font-weight: 600;
+        margin-bottom: 6px;
+        color: var(--text-muted);
+        font-size: 0.75em;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .fx-store-orders-scope .filter-group select,
+    .fx-store-orders-scope .filter-group input {
+        padding: 8px 12px;
+        background: var(--surface-primary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 8px;
+        font-size: 0.88em;
+        color: var(--text-main);
+        outline: none;
+    }
+
+    .fx-store-orders-scope .filter-group select:focus,
+    .fx-store-orders-scope .filter-group input:focus {
+        border-color: var(--accent-primary);
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+    }
+
+    .fx-store-orders-scope .table-section {
+        padding: 24px 36px 36px;
+        overflow-x: auto;
+    }
+
+    .fx-store-orders-scope .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+        gap: 14px;
+    }
+
+    .fx-store-orders-scope .table-header h2 {
+        font-size: 1.25em;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .fx-store-orders-scope .badge-count {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-subtle);
+        color: var(--accent-primary);
+        padding: 6px 14px;
+        border-radius: 20px;
+        font-weight: 600;
+        font-size: 0.82em;
+    }
+
+    .fx-store-orders-scope table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        border: 1px solid var(--border-dim);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+
+    .fx-store-orders-scope thead { background: var(--surface-secondary); }
+
+    .fx-store-orders-scope th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-muted);
+        font-size: 0.8em;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        border-bottom: 1px solid var(--border-dim);
+    }
+
+    .fx-store-orders-scope td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--border-dim);
+        color: var(--text-main);
+        font-size: 0.88em;
+    }
+
+    .fx-store-orders-scope tr:last-child td { border-bottom: none; }
+    .fx-store-orders-scope tbody tr { background: var(--surface-primary); transition: background 0.15s ease; }
+    .fx-store-orders-scope tbody tr:hover { background: var(--surface-secondary); }
+
+    .fx-store-orders-scope .brand-pill {
+        padding: 3px 8px;
+        border-radius: 4px;
+        font-size: 0.78em;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+
+    .fx-store-orders-scope .brand-uathayam { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .fx-store-orders-scope .brand-ariser { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+
+    .fx-store-orders-scope .status-pill {
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 0.78em;
+        display: inline-block;
+    }
+
+    .fx-store-orders-scope .status-fulfilled { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
+    .fx-store-orders-scope .status-unfulfilled { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.25); }
+    .fx-store-orders-scope .status-paid { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.25); }
+    .fx-store-orders-scope .status-cancel { background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); }
+    .fx-store-orders-scope .status-cod { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.25); }
+
+    .fx-store-orders-scope .tag-metric {
+        font-weight: 600;
+        padding: 2px 7px;
+        border-radius: 4px;
+        font-size: 0.85em;
+    }
+    .fx-store-orders-scope .tag-metric.prepaid { color: #60a5fa; background: rgba(59, 130, 246, 0.1); }
+    .fx-store-orders-scope .tag-metric.cod { color: #c084fc; background: rgba(168, 85, 247, 0.1); }
+    .fx-store-orders-scope .tag-metric.fulfilled { color: #34d399; background: rgba(16, 185, 129, 0.1); }
+    .fx-store-orders-scope .tag-metric.unfulfilled { color: #f87171; background: rgba(239, 68, 68, 0.1); }
+    .fx-store-orders-scope .tag-metric.cancelled { color: #9ca3af; background: rgba(107, 114, 128, 0.15); }
+
+    .fx-store-orders-scope .sku-badge-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        max-width: 520px;
+    }
+
+    .fx-store-orders-scope .sku-badge {
+        background: rgba(99, 102, 241, 0.15);
+        border: 1px solid rgba(99, 102, 241, 0.3);
+        color: #a5b4fc;
+        padding: 3px 8px;
+        border-radius: 6px;
+        font-size: 0.8em;
+        font-family: 'Courier New', Courier, monospace;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .fx-store-orders-scope .sku-badge .sku-qty {
+        color: #ffffff;
+        background: rgba(99, 102, 241, 0.4);
+        padding: 1px 5px;
+        border-radius: 4px;
+        margin-left: 4px;
+        font-size: 0.85em;
+    }
+
+    /* Insights Tab Cards & Layout */
+    .fx-store-orders-scope .insights-section {
+        padding: 28px 36px 40px;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+    }
+
+    .fx-store-orders-scope .insights-top-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+    }
+
+    .fx-store-orders-scope .intel-card {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 22px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .fx-store-orders-scope .intel-card h3 {
+        font-size: 1.1em;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .fx-store-orders-scope .intel-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-dim);
+        font-size: 0.9em;
+    }
+
+    .fx-store-orders-scope .intel-row:last-child {
+        border-bottom: none;
+    }
+
+    .fx-store-orders-scope .intel-label {
+        color: var(--text-muted);
+    }
+
+    .fx-store-orders-scope .intel-val {
+        font-weight: 700;
+        color: var(--text-main);
+    }
+
+    .fx-store-orders-scope .geo-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+        gap: 20px;
+        padding: 24px 36px 36px;
+    }
+
+    .fx-store-orders-scope .geo-card {
+        background: var(--surface-secondary);
+        border: 1px solid var(--border-subtle);
+        border-radius: 12px;
+        padding: 18px;
+        box-shadow: var(--shadow-md);
+    }
+
+    .fx-store-orders-scope .geo-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 14px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .fx-store-orders-scope .geo-card-header h3 {
+        font-size: 1.05em;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    .fx-store-orders-scope .geo-card table { border: none; }
+    .fx-store-orders-scope .geo-card th, .fx-store-orders-scope .geo-card td { padding: 9px 12px; font-size: 0.83em; }
+
+    .fx-store-orders-scope .no-data {
+        text-align: center;
+        padding: 50px 20px;
+        color: var(--text-muted);
+        font-size: 0.9em;
+    }
+
+    .fx-store-orders-scope .alert-box {
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-size: 0.88em;
+        display: none;
+        margin-top: 10px;
+        width: 100%;
+    }
+
+    .fx-store-orders-scope .alert-error { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; }
+    .fx-store-orders-scope .alert-success { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); color: #86efac; }
+
+    @media (max-width: 900px) {
+        .fx-store-orders-scope .dual-upload-grid { grid-template-columns: 1fr; }
+        .fx-store-orders-scope .header,
+        .fx-store-orders-scope .upload-wrapper,
+        .fx-store-orders-scope .tab-bar,
+        .fx-store-orders-scope .insights-grid,
+        .fx-store-orders-scope .filters-section,
+        .fx-store-orders-scope .table-section,
+        .fx-store-orders-scope .geo-grid,
+        .fx-store-orders-scope .insights-section {
+            padding-left: 20px;
+            padding-right: 20px;
+        }
+    }
+</style>

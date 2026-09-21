@@ -1,0 +1,11 @@
+{
+  "key": "pending-po",
+  "title": "Pending PO Generator",
+  "menuLabel": "Pending PO",
+  "path": "pending-po",
+  "icon": "clipboard-list",
+  "group": "Operations Tools",
+  "order": 50,
+  "enabled": true,
+  "description": "Categorize pending order-item SKUs and generate a styled purchase-order workbook"
+}

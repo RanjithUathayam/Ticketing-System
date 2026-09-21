@@ -1,0 +1,11 @@
+{
+  "key": "box-packing",
+  "title": "Box Packing Entry",
+  "menuLabel": "Box Packing",
+  "path": "box-packing",
+  "icon": "archive-box",
+  "group": "Operations Tools",
+  "order": 60,
+  "enabled": true,
+  "description": "Scan items into boxes and export the packing manifest"
+}

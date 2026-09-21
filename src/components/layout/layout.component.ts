@@ -5,6 +5,9 @@ import { CommonModule } from '@angular/common';
 import { filter } from 'rxjs';
 import { AuthService } from '../../services/auth.service';
 import { NotificationService } from '../../services/notification.service';
+import { FEATURE_MENU } from '../../features/features.generated';
+import { FEATURE_ICON_PATHS } from '../../features/feature-icons';
+import { FeaturePageMeta } from '../../features/feature.types';
 
 @Component({
   selector: 'app-layout',
@@ -36,6 +39,11 @@ export class LayoutComponent {
   canViewLabelPrintConfig;
   canViewLabelPrint;
   canViewHwInventory;
+  canViewOperations;
+
+  /** Auto-discovered "Operations Tools" pages, grouped by their `group` field and sorted by `order`. See src/features/README.md. */
+  readonly opsGroups: { group: string; items: FeaturePageMeta[] }[];
+  readonly featureIconPath = (icon: FeaturePageMeta['icon']) => FEATURE_ICON_PATHS[icon] ?? FEATURE_ICON_PATHS.default;
 
   constructor(
     public authService:         AuthService,
@@ -85,6 +93,21 @@ export class LayoutComponent {
       this.authService.isAdmin() ||
       this.authService.isManager()
     );
+    // Operations Tools (auto-discovered pages under src/features/) — Admin/Manager only,
+    // matching OpsGuard in src/guards/ops.guard.ts.
+    this.canViewOperations = computed(() =>
+      this.authService.isAdmin() ||
+      this.authService.isManager()
+    );
+
+    this.opsGroups = Object.values(
+      FEATURE_MENU
+        .filter(m => m.enabled)
+        .reduce((acc, m) => {
+          (acc[m.group] ||= { group: m.group, items: [] }).items.push(m);
+          return acc;
+        }, {} as Record<string, { group: string; items: FeaturePageMeta[] }>)
+    );
 
     this.router.events.pipe(
       filter((e): e is NavigationEnd => e instanceof NavigationEnd)
@@ -111,6 +134,11 @@ export class LayoutComponent {
     if (url.match(/\/hw-inventory\/\d+/))     return 'Edit Asset';
     if (url.includes('/hw-inventory/new'))    return 'New Asset';
     if (url.includes('/hw-inventory'))        return 'HW Inventory';
+    if (url.includes('/ops/')) {
+      const segment = url.split('/ops/')[1]?.split(/[/?#]/)[0];
+      const feature = FEATURE_MENU.find(m => m.path === segment);
+      if (feature) return feature.title;
+    }
     return 'Dashboard';
   }
 

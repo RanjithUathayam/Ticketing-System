@@ -1,0 +1,11 @@
+{
+  "key": "shipment-dashboard",
+  "title": "Multi-Courier Shipment Dashboard",
+  "menuLabel": "Shipment Dashboard",
+  "path": "shipment-dashboard",
+  "icon": "truck",
+  "group": "Operations Tools",
+  "order": 20,
+  "enabled": true,
+  "description": "Upload EKART/BANDB, BlueDart and India Post exports for shipment analytics"
+}

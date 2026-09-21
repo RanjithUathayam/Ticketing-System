@@ -1,0 +1,419 @@
+<div class="wrap fx-box-packing-scope" #root>
+  <header class="top">
+    <div class="brandblock">
+      <span class="eyebrow">Re-Iorning</span>
+      <h1>Box Packing Tool</h1>
+    </div>
+    <div class="meta-right" id="itemCountDisplay">No inventory loaded</div>
+  </header>
+
+  <!-- CSV IMPORT SECTION -->
+  <div class="panel">
+    <h2>Load Inventory Data</h2>
+    <div class="csv-import-section">
+      <input type="file" id="csvFileInput" accept=".csv" />
+      <button id="importCsvBtn" class="accent" type="button">Import CSV</button>
+      <div id="csvStatus" class="csv-status" style="display:none;"></div>
+    </div>
+    <div style="font-size:12px; color:#6b665a; margin-top:8px;">
+      Upload your DataTable CSV (Item Name, SKU Code columns required)
+    </div>
+  </div>
+
+  <!-- BOX ENTRY SECTION -->
+  <div class="panel">
+    <h2>Create Box</h2>
+    <div class="box-strip">
+      <label>Box Number:</label>
+      <input type="text" id="boxNumberInput" placeholder="e.g., BOX-001">
+      <button id="openBoxBtn" class="accent" type="button" disabled>Open Box</button>
+      <div class="spacer"></div>
+      <div class="box-status" id="boxStatus">Not started</div>
+    </div>
+  </div>
+
+  <!-- ITEM ENTRY SECTION -->
+  <div class="panel" id="itemEntryPanel" style="display:none;">
+    <h2>Add Items to Box</h2>
+    <div class="entry-grid">
+      <div class="field">
+        <label>Search Product or SKU</label>
+        <input type="text" id="itemSearch" placeholder="Type product name or SKU...">
+        <div class="dropdown" id="itemDropdown"></div>
+        <div class="selected-chip" id="selectedChip">
+          <span id="selectedChipText"></span>
+          <span class="x" id="clearSelected">✕</span>
+        </div>
+      </div>
+      <div></div>
+      <div class="field">
+        <label>Qty</label>
+        <input type="number" id="qtyInput" min="1" placeholder="1">
+      </div>
+    </div>
+    <button id="addItemBtn" class="primary" type="button" style="margin-top:12px;">Add Item to Box</button>
+  </div>
+
+  <!-- CURRENT BOX TABLE -->
+  <div class="panel" id="currentBoxPanel" style="display:none;">
+    <h2>Current Box</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Product Name</th>
+          <th>SKU Code</th>
+          <th>Qty</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="currentBoxBody">
+      </tbody>
+    </table>
+    <div class="totals-line">
+      <span><span id="currentLineCount">0</span> lines</span>
+      <span><strong><span id="currentQtyTotal">0</span></strong> total qty</span>
+    </div>
+    <div class="box-actions">
+      <button id="closeBoxBtn" class="primary" type="button">Close Box</button>
+      <button id="clearCurrentBoxBtn" class="danger" type="button">Clear Box</button>
+    </div>
+  </div>
+
+  <!-- CLOSED BOXES SUMMARY -->
+  <div class="panel" id="closedSummaryPanel" style="display:none;">
+    <h2>Closed Boxes</h2>
+    <div id="closedBoxesList"></div>
+    <div class="totals-line" style="margin-top:14px;">
+      <span id="grandTotalLine">0 boxes · 0 lines · 0 qty</span>
+    </div>
+  </div>
+
+  <!-- EXPORT SECTION -->
+  <div class="actions-bar">
+    <button id="exportBtn" class="primary" type="button">Export to Excel</button>
+    <button id="resetAllBtn" class="ghost" type="button">Reset Everything</button>
+  </div>
+</div>
+
+<style>
+  .fx-box-packing-scope{
+    --ink:#1c2422;
+    --paper:#f6f4ee;
+    --panel:#ffffff;
+    --line:#d8d3c4;
+    --accent:#b5562f;
+    --accent-dark:#8c4222;
+    --good:#3f7a4f;
+    --good-bg:#e7f3e9;
+    --warn-bg:#fff4d6;
+    --warn-ink:#7a5a00;
+    --highlight:#ffe27a;
+    --mono:'JetBrains Mono', 'SFMono-Regular', Consolas, monospace;
+
+    display:block;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Inter', -apple-system, Segoe UI, Roboto, sans-serif;
+    line-height:1.4;
+    padding-bottom:60px;
+    max-width:920px;
+    margin:0 auto;
+    padding-left:16px;
+    padding-right:16px;
+    padding-top:18px;
+    border-radius:12px;
+  }
+  .fx-box-packing-scope *{box-sizing:border-box;}
+
+  .fx-box-packing-scope header.top{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    border-bottom:3px solid var(--ink);
+    padding-bottom:10px;
+    margin-bottom:18px;
+    flex-wrap:wrap;
+  }
+  .fx-box-packing-scope .brandblock{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .fx-box-packing-scope .brandblock .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--accent-dark);
+    background:var(--warn-bg);
+    padding:3px 7px;
+    border-radius:3px;
+    border:1px solid #e8d28e;
+  }
+  .fx-box-packing-scope h1{
+    font-size:22px;
+    margin:0;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .fx-box-packing-scope .meta-right{
+    font-family:var(--mono);
+    font-size:12px;
+    color:#6b665a;
+    text-align:right;
+  }
+
+  .fx-box-packing-scope .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:16px;
+    margin-bottom:16px;
+    box-shadow:0 1px 2px rgba(0,0,0,0.03);
+  }
+  .fx-box-packing-scope .panel h2{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:#6b665a;
+    margin:0 0 12px 0;
+    font-weight:600;
+  }
+
+  .fx-box-packing-scope .csv-import-section{
+    display:flex;
+    gap:12px;
+    align-items:center;
+    flex-wrap:wrap;
+    padding:12px;
+    background:#fbf9f3;
+    border-radius:8px;
+    border-left:4px solid var(--accent);
+  }
+  .fx-box-packing-scope .csv-import-section input[type=file]{
+    font-size:13px;
+    flex:1;
+    min-width:200px;
+  }
+  .fx-box-packing-scope .csv-import-section button{
+    white-space:nowrap;
+  }
+  .fx-box-packing-scope .csv-status{
+    font-family:var(--mono);
+    font-size:12px;
+    padding:6px 12px;
+    border-radius:6px;
+    background:var(--good-bg);
+    color:var(--good);
+    border:1px solid #bfe0c6;
+  }
+  .fx-box-packing-scope .csv-status.error{
+    background:#fbe9e4;
+    color:#a83b2a;
+    border-color:#e3b3a4;
+  }
+  .fx-box-packing-scope .csv-status.warning{
+    background:var(--warn-bg);
+    color:var(--warn-ink);
+    border-color:#e8d28e;
+  }
+
+  .fx-box-packing-scope .box-strip{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+  .fx-box-packing-scope .box-strip label{font-size:13px; font-weight:600; color:#444;}
+  .fx-box-packing-scope .box-strip input[type=text]{
+    font-family:var(--mono);
+    font-size:18px;
+    font-weight:700;
+    padding:9px 12px;
+    border:2px solid var(--ink);
+    border-radius:6px;
+    width:180px;
+    background:#fff;
+  }
+  .fx-box-packing-scope .box-status{
+    font-family:var(--mono);
+    font-size:12px;
+    padding:5px 10px;
+    border-radius:20px;
+    background:var(--good-bg);
+    color:var(--good);
+    border:1px solid #bfe0c6;
+  }
+  .fx-box-packing-scope .box-status.closed{background:#f1eee2; color:#8a8470; border-color:var(--line);}
+  .fx-box-packing-scope .box-strip .spacer{flex:1;}
+  .fx-box-packing-scope button{
+    font-family:inherit;
+    font-size:14px;
+    font-weight:600;
+    border-radius:7px;
+    border:1px solid transparent;
+    padding:9px 16px;
+    cursor:pointer;
+    transition:filter .12s ease, transform .05s ease;
+  }
+  .fx-box-packing-scope button:active{transform:translateY(1px);}
+  .fx-box-packing-scope button.primary{background:var(--ink); color:#fff;}
+  .fx-box-packing-scope button.primary:hover{filter:brightness(1.15);}
+  .fx-box-packing-scope button.accent{background:var(--accent); color:#fff;}
+  .fx-box-packing-scope button.accent:hover{filter:brightness(1.08);}
+  .fx-box-packing-scope button.ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .fx-box-packing-scope button.ghost:hover{background:#f1eee2;}
+  .fx-box-packing-scope button:disabled{opacity:.4; cursor:not-allowed;}
+  .fx-box-packing-scope button.danger{background:#fff; color:#a83b2a; border:1px solid #e3b3a4;}
+  .fx-box-packing-scope button.danger:hover{background:#fbe9e4;}
+
+  .fx-box-packing-scope .entry-grid{
+    display:grid;
+    grid-template-columns: 1fr 130px auto;
+    gap:10px;
+    align-items:end;
+  }
+  @media (max-width:640px){
+    .fx-box-packing-scope .entry-grid{grid-template-columns: 1fr; }
+  }
+  .fx-box-packing-scope .field label{
+    display:block;
+    font-size:12px;
+    font-weight:600;
+    color:#6b665a;
+    margin-bottom:5px;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .fx-box-packing-scope .field{position:relative;}
+  .fx-box-packing-scope .field input[type=text], .fx-box-packing-scope .field input[type=number]{
+    width:100%;
+    font-size:15px;
+    padding:10px 11px;
+    border:1.5px solid var(--line);
+    border-radius:7px;
+    background:#fff;
+    font-family:inherit;
+  }
+  .fx-box-packing-scope .field input:focus{outline:2px solid var(--accent); outline-offset:1px; border-color:var(--accent);}
+
+  .fx-box-packing-scope .dropdown{
+    position:absolute;
+    top:calc(100% + 4px);
+    left:0; right:0;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:8px;
+    max-height:280px;
+    overflow-y:auto;
+    z-index:50;
+    box-shadow:0 8px 24px rgba(0,0,0,0.12);
+    display:none;
+  }
+  .fx-box-packing-scope .dropdown.open{display:block;}
+  .fx-box-packing-scope .dropdown .opt{
+    padding:10px 12px;
+    cursor:pointer;
+    font-size:13px;
+    border-bottom:1px solid #f1eee2;
+  }
+  .fx-box-packing-scope .dropdown .opt:last-child{border-bottom:none;}
+  .fx-box-packing-scope .dropdown .opt:hover, .fx-box-packing-scope .dropdown .opt.active{background:var(--warn-bg);}
+  .fx-box-packing-scope .dropdown .opt-content{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    align-items:center;
+  }
+  .fx-box-packing-scope .dropdown .opt-name{font-weight:500;}
+  .fx-box-packing-scope .dropdown .opt-sku{
+    font-family:var(--mono);
+    font-size:11px;
+    color:#9a9384;
+    white-space:nowrap;
+  }
+  .fx-box-packing-scope .dropdown .empty{padding:12px; font-size:13px; color:#9a9384; text-align:center;}
+
+  .fx-box-packing-scope .selected-chip{
+    display:none;
+    align-items:center;
+    gap:8px;
+    margin-top:8px;
+    font-size:13px;
+    background:var(--good-bg);
+    border:1px solid #bfe0c6;
+    color:var(--good);
+    padding:7px 10px;
+    border-radius:7px;
+  }
+  .fx-box-packing-scope .selected-chip.show{display:flex;}
+  .fx-box-packing-scope .selected-chip .x{cursor:pointer; font-weight:700; margin-left:auto;}
+
+  .fx-box-packing-scope table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:14px;
+  }
+  .fx-box-packing-scope thead th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:#6b665a;
+    border-bottom:2px solid var(--ink);
+    padding:8px 8px;
+  }
+  .fx-box-packing-scope tbody td{
+    padding:9px 8px;
+    border-bottom:1px solid #ece8da;
+    vertical-align:middle;
+  }
+  .fx-box-packing-scope tbody tr:hover{background:#fbf9f3;}
+  .fx-box-packing-scope td.sku-cell{
+    font-family:var(--mono);
+    background:var(--highlight);
+    border-radius:4px;
+    font-weight:600;
+    width:1%;
+    white-space:nowrap;
+  }
+  .fx-box-packing-scope td.qty-cell{font-weight:700; text-align:center;}
+  .fx-box-packing-scope td.rm{text-align:right;}
+  .fx-box-packing-scope .rm-btn{
+    background:none; border:none; color:#a83b2a; font-size:13px; cursor:pointer; padding:4px 8px;
+  }
+  .fx-box-packing-scope .rm-btn:hover{text-decoration:underline;}
+  .fx-box-packing-scope .empty-row td{
+    text-align:center;
+    color:#9a9384;
+    padding:22px 0;
+    font-style:italic;
+  }
+
+  .fx-box-packing-scope .totals-line{
+    display:flex; justify-content:space-between; align-items:center;
+    margin-top:10px; padding-top:10px; border-top:1px dashed var(--line);
+    font-size:13px; color:#6b665a;
+  }
+  .fx-box-packing-scope .totals-line strong{color:var(--ink); font-size:15px;}
+
+  .fx-box-packing-scope .box-actions{
+    display:flex; gap:10px; margin-top:14px; flex-wrap:wrap;
+  }
+
+  .fx-box-packing-scope .box-pill{
+    display:inline-block;
+    background:var(--good-bg);
+    color:var(--good);
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    margin-right:8px;
+    border:1px solid #bfe0c6;
+  }
+
+  .fx-box-packing-scope .actions-bar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-bottom:16px;
+  }
+</style>
