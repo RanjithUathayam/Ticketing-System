@@ -3,7 +3,7 @@
 // Regenerate with `npm run generate:features` (also runs automatically
 // before `npm run dev` / `npm run build`).
 //
-// Discovered 6 feature page(s) at 2026-09-21T09:57:04.904Z.
+// Discovered 6 feature page(s) at 2026-10-26T09:27:04.869Z.
 import { Routes } from '@angular/router';
 import { FeaturePageMeta } from './feature.types';
 

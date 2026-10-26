@@ -55,12 +55,15 @@ export class QzTrayService {
   /** Matches a user-facing printer name against what QZ Tray reports as installed. */
   resolvePrinterName(target: string, allPrinters: string[]): string | undefined {
     const wanted = target.trim();
+    // CUPS (Linux) queue names can't contain spaces, so "TSC TTP-244 Pro" is
+    // installed as "TSC_TTP-244_Pro" — compare with spaces/underscores unified.
+    const norm = (s: string) => s.toLowerCase().replace(/[\s_]+/g, ' ').trim();
     return (
       allPrinters.find(p => p === wanted) ??
-      allPrinters.find(p => p.toLowerCase() === wanted.toLowerCase()) ??
+      allPrinters.find(p => norm(p) === norm(wanted)) ??
       allPrinters.find(p =>
-        p.toLowerCase().includes(wanted.toLowerCase()) ||
-        wanted.toLowerCase().includes(p.toLowerCase())
+        norm(p).includes(norm(wanted)) ||
+        norm(wanted).includes(norm(p))
       )
     );
   }
@@ -80,7 +83,17 @@ export class QzTrayService {
       );
     }
 
-    const config = qz.configs.create(resolved, configOptions);
+    // On Linux/macOS QZ Tray submits raw jobs through CUPS, which auto-detects
+    // TSPL as text/plain and runs it through its text filter — the printer then
+    // prints the command text itself instead of executing it. altPrinting makes
+    // QZ Tray use `lp -o raw` so the bytes reach the printer untouched.
+    const isRawJob = data.some(d => d?.type === 'raw');
+    const isWindowsClient = /win/i.test(navigator.platform || navigator.userAgent);
+    const options = isRawJob && !isWindowsClient && configOptions['altPrinting'] === undefined
+      ? { ...configOptions, altPrinting: true }
+      : configOptions;
+
+    const config = qz.configs.create(resolved, options);
     try {
       await qz.print(config, data);
     } catch (err: any) {
